@@ -7,26 +7,22 @@
 
 import SwiftUI
 import SwiftData
+import AVFoundation
 
 @main
 struct AyMusicApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
+    init() {
+        let audioSession = AVAudioSession.sharedInstance()
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            try audioSession.setCategory(AVAudioSession.Category.playback)
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            print("Setting category to AVAudioSessionCategoryPlayback failed.")
         }
-    }()
-
+    }
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(sharedModelContainer)
     }
 }
