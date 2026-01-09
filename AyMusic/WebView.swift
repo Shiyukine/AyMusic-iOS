@@ -843,6 +843,33 @@ struct WebView: UIViewRepresentable {
                     executeJavaScript(script, in: iframeInfo, webView: webView)
                 }
             
+            case "getWindowInsets":
+                // Get safe area insets (status bar, notch/Dynamic Island, home indicator, etc.)
+                // Use the window's root view controller to get accurate insets even if webView isn't laid out yet
+                guard let webView = webView else {
+                    let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','{\"error\":\"WebView not available\"}'); }"
+                    executeJavaScript(script, in: iframeInfo, webView: webView)
+                    return
+                }
+                
+                // Try to get insets from the window's key scene first (most reliable)
+                var insets = UIEdgeInsets.zero
+                if let windowScene = webView.window?.windowScene,
+                   let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
+                    insets = keyWindow.safeAreaInsets
+                } else if let window = webView.window {
+                    // Fallback to window's safeAreaInsets
+                    insets = window.safeAreaInsets
+                } else {
+                    // Last resort: use webView's own safeAreaInsets
+                    insets = webView.safeAreaInsets
+                }
+
+                let scale = UIScreen.main.scale     
+                let insetsJSON = "{\"left\": \(insets.left * scale), \"top\": \(insets.top * scale), \"right\": \(insets.right * scale), \"bottom\": \(insets.bottom * scale)}"
+                let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','\(insetsJSON)'); }"
+                executeJavaScript(script, in: iframeInfo, webView: webView)
+            
             case "clearCodeInjecters":
                 WebView.codeInjecter.removeAll()
                 
@@ -879,26 +906,6 @@ struct WebView: UIViewRepresentable {
                     let content = exists ? cookies.first { $0.name == name && url.contains($0.domain) }?.value ?? "" : ""
                     let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','\(content)'); }"
                     self?.executeJavaScript(script, in: iframeInfo, webView: webView)
-                }
-                
-            case "getWindowInsets":
-                // For iOS, we can return safe area insets as window insets
-                let insets = webView?.safeAreaInsets ?? UIEdgeInsets.zero
-                let insetsDict: [String: CGFloat] = [
-                    "top": insets.top,
-                    "left": insets.left,
-                    "bottom": insets.bottom,
-                    "right": insets.right
-                ]
-                let jsonData = try? JSONSerialization.data(withJSONObject: insetsDict)
-                if let jsonString = jsonData.flatMap({ String(data: $0, encoding: .utf8) }) {
-                    let escapedJSON = jsonString
-                        .replacingOccurrences(of: "\\", with: "\\\\")
-                        .replacingOccurrences(of: "'", with: "\\'")
-                        .replacingOccurrences(of: "\n", with: "\\n")
-                        .replacingOccurrences(of: "\r", with: "\\r")
-                    let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','\(escapedJSON)'); }"
-                    executeJavaScript(script, in: iframeInfo, webView: webView)
                 }
 
             case "cacheRequestBody":
@@ -1017,7 +1024,7 @@ struct WebView: UIViewRepresentable {
                 }
                 
             case "restartApp":
-                webView?.reload()
+                webView?.reloadFromOrigin()
 
             default:
                 print("⚠️ Unknown method: \(method)")
