@@ -90,14 +90,17 @@ struct ExtWebView: UIViewRepresentable {
         context.coordinator.webView = webView
 
         let userAgent = webView.value(forKey: "userAgent") as? String ?? ""
+        print(userAgent)
         // Extract iOS version (e.g., 18_6)
-        let iosVersionPattern = #"iPhone OS ([\d_]+)"#
+        let iosVersionPattern = [#"iPhone OS ([\d_]+)"#, #"iPad OS ([\d_]+)"#, #"CPU OS ([\d_]+)"#]
         let iosVersion: String = {
-            let regex = try? NSRegularExpression(pattern: iosVersionPattern)
-            let nsString = userAgent as NSString
-            if let match = regex?.firstMatch(in: userAgent, range: NSRange(location: 0, length: nsString.length)),
-            match.numberOfRanges > 1 {
-                return nsString.substring(with: match.range(at: 1)).replacingOccurrences(of: "_", with: ".")
+            for pattern in iosVersionPattern {
+                let regex = try? NSRegularExpression(pattern: pattern)
+                let nsString = userAgent as NSString
+                if let match = regex?.firstMatch(in: userAgent, range: NSRange(location: 0, length: nsString.length)),
+                   match.numberOfRanges > 1 {
+                    return nsString.substring(with: match.range(at: 1)).replacingOccurrences(of: "_", with: ".")
+                }
             }
             return "0.0"
         }()
@@ -118,6 +121,9 @@ struct ExtWebView: UIViewRepresentable {
         let macDevice = "(Macintosh; Intel Mac OS X 10_15_7)"
         var newUA = userAgent
             .replacingOccurrences(of: #"\(iPhone; CPU iPhone OS [^)]*\)"#, with: macDevice, options: .regularExpression)
+            .replacingOccurrences(of: #"\(iPhone; CPU OS [^)]*\)"#, with: macDevice, options: .regularExpression)
+            .replacingOccurrences(of: #"\(iPad; CPU OS [^)]*\)"#, with: macDevice, options: .regularExpression)
+            .replacingOccurrences(of: #"\(iPad; CPU iPad OS [^)]*\)"#, with: macDevice, options: .regularExpression)
             .replacingOccurrences(of: #" Mobile/[\w\d]+"#, with: "", options: .regularExpression)
         
         // Remove any existing Version/xxx and Safari/xxx

@@ -293,6 +293,20 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
                 "Access-Control-Allow-Headers"
             ]
             
+            let headersToGet = [
+                "Access-Control-Allow-Headers"
+            ]
+            
+            var headersContent: [String: String] = [:]
+            
+            for header in headersToGet {
+                for key in modifiedHeaders.keys {
+                    if key.lowercased() == header.lowercased() {
+                        headersContent[key.lowercased()] = modifiedHeaders[key]
+                    }
+                }
+            }
+            
             for header in headersToRemove {
                 for key in modifiedHeaders.keys {
                     if key.lowercased() == header.lowercased() {
@@ -335,7 +349,8 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
             } else {
                 modifiedHeaders["Access-Control-Allow-Origin"] = "*"
             }
-            modifiedHeaders["Access-Control-Allow-Headers"] = "*, X-Body-Data, X-Body-Encoding, Content-Type"
+            let currentAllowedHeaders = headersContent["Access-Control-Allow-Headers".lowercased()] ?? "*"
+            modifiedHeaders["Access-Control-Allow-Headers"] = currentAllowedHeaders + ", X-Body-Data, X-Body-Encoding, Content-Type"
             modifiedHeaders["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH"
             
             // Create modified response
@@ -429,12 +444,11 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
         // Handle redirects and extract cookies
         if let url = response.url,
-           let headers = response.allHeaderFields as? [String: String] {
+        let headers = response.allHeaderFields as? [String: String] {
             let cookies = HTTPCookie.cookies(withResponseHeaderFields: headers, for: url)
             for cookie in cookies {
                 HTTPCookieStorage.shared.setCookie(cookie)
                 
-                // CRITICAL: Also notify WKWebView to sync to its cookie store
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(
                         name: NSNotification.Name("SyncCookieToWebView"),
@@ -444,11 +458,52 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
             }
         }
         
-        // CRITICAL: Stop automatic redirect and handle manually
-        // This ensures the redirect goes through our URLSession with SSL bypass
-        client?.urlProtocol(self, wasRedirectedTo: request, redirectResponse: response)
+        // Create mutable redirect request
+        guard var mutableRedirect = (request as NSURLRequest).mutableCopy() as? NSMutableURLRequest else {
+            completionHandler(nil)
+            return
+        }
         
-        // Return nil to prevent automatic redirect - WKWebView will handle it
+        // If original request needed credentials, add marker to redirect URL
+        if needCredentialsHeader == "true", let redirectUrl = request.url {
+            var components = URLComponents(url: redirectUrl, resolvingAgainstBaseURL: false)
+            if var queryItems = components?.queryItems {
+                queryItems.append(URLQueryItem(name: "__credentials", value: "true"))
+                components?.queryItems = queryItems
+            } else {
+                components?.queryItems = [URLQueryItem(name: "__credentials", value: "true")]
+            }
+            
+            if let modifiedUrl = components?.url {
+                mutableRedirect.url = modifiedUrl
+            }
+        }
+        
+        // Modify the redirect response to include CORS headers
+        var modifiedHeaders = response.allHeaderFields as? [String: String] ?? [:]
+        
+        // Add CORS headers to the redirect response
+        if needCredentialsHeader == "true" {
+            modifiedHeaders["Access-Control-Allow-Credentials"] = "true"
+            let requestOrigin = self.request.value(forHTTPHeaderField: "Origin") ?? "*"
+            modifiedHeaders["Access-Control-Allow-Origin"] = requestOrigin
+        } else {
+            modifiedHeaders["Access-Control-Allow-Origin"] = "*"
+        }
+        
+        // Create modified redirect response with CORS headers
+        if let modifiedRedirectResponse = HTTPURLResponse(
+            url: response.url!,
+            statusCode: response.statusCode,
+            httpVersion: "HTTP/1.1",
+            headerFields: modifiedHeaders
+        ) {
+            client?.urlProtocol(self, wasRedirectedTo: mutableRedirect as URLRequest, redirectResponse: modifiedRedirectResponse)
+        } else {
+            client?.urlProtocol(self, wasRedirectedTo: mutableRedirect as URLRequest, redirectResponse: response)
+        }
+        
+        // Return nil - let WKWebView handle the redirect navigation
         completionHandler(nil)
     }
     

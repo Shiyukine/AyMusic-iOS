@@ -1,4 +1,14 @@
 (() => {
+    function utf8ToBase64(str) {
+        const encoder = new TextEncoder();
+        const bytes = encoder.encode(str);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+    }
+
     // Intercept fetch to cache POST body data
     const originalFetch = window.fetch;
     window.fetch = async function (url, options = {}) {
@@ -61,11 +71,20 @@
                             options.headers.append('X-Body-Data', bodyData);
                             if (isBase64) options.headers.append('X-Body-Encoding', 'base64');
                         } catch (e) {
-                            // If headers is not a Headers object, create one
-                            const newHeaders = new Headers(options.headers || {});
-                            newHeaders.append('X-Body-Data', bodyData);
-                            if (isBase64) newHeaders.append('X-Body-Encoding', 'base64');
-                            options.headers = newHeaders;
+                            try {
+                                // If headers is not a Headers object, create one
+                                const newHeaders = new Headers(options.headers || {});
+                                newHeaders.append('X-Body-Data', bodyData);
+                                if (isBase64) newHeaders.append('X-Body-Encoding', 'base64');
+                                options.headers = newHeaders;
+                            } catch (e2) {
+                                if (e2.name === 'TypeError') {
+                                    const newHeaders = new Headers(options.headers || {});
+                                    newHeaders.append('X-Body-Data', utf8ToBase64(bodyData));
+                                    newHeaders.append('X-Body-Encoding', 'base64');
+                                    options.headers = newHeaders;
+                                }
+                            }
                         }
                     }
                     else console.warn('[IframeInjector] bodyData not available');
@@ -99,8 +118,15 @@
                     // Cache via boundobject with unique ID in header
                     if (bodyData) {
                         // Create new Request with X-Body-Data header and explicit body                                
-                        url.headers.append('X-Body-Data', bodyData);
-                        if (isBase64) url.headers.append('X-Body-Encoding', 'base64');
+                        try {
+                            url.headers.append('X-Body-Data', bodyData);
+                            if (isBase64) url.headers.append('X-Body-Encoding', 'base64');
+                        } catch (e) {
+                            if (e.name === 'TypeError') {
+                                url.headers.append('X-Body-Data', utf8ToBase64(bodyData));
+                                url.headers.append('X-Body-Encoding', 'base64');
+                            }
+                        }
                     }
                     else console.warn('[IframeInjector] boundobject not available');
                 }
@@ -199,10 +225,18 @@
                     bodyData = btoa(binaryStr);
                     isBase64 = true;
                     try {
-                        this.setRequestHeader('X-Body-Data', bodyData);
-                        if (isBase64) this.setRequestHeader('X-Body-Encoding', 'base64');
+                        try {
+                            this.setRequestHeader('X-Body-Data', bodyData);
+                            if (isBase64) this.setRequestHeader('X-Body-Encoding', 'base64');
+                        }
+                        catch (e) {
+                            if (e.name === 'TypeError') {
+                                this.setRequestHeader('X-Body-Data', utf8ToBase64(bodyData));
+                                this.setRequestHeader('X-Body-Encoding', 'base64');
+                            }
+                        }
                     } catch (e) {
-                        console.warn('[IframeInjector] Cannot set X-Body-Data header on XMLHttpRequest');
+                        console.error('[IframeInjector] Cannot set X-Body-Data header on XMLHttpRequest', e);
                     }
                     return originalSend.apply(this, arguments);
                 };
@@ -241,10 +275,18 @@
 
             if (bodyData) {
                 try {
-                    this.setRequestHeader('X-Body-Data', bodyData);
-                    if (isBase64) this.setRequestHeader('X-Body-Encoding', 'base64');
+                    try {
+                        this.setRequestHeader('X-Body-Data', bodyData);
+                        if (isBase64) this.setRequestHeader('X-Body-Encoding', 'base64');
+                    }
+                    catch (e) {
+                        if (e.name === 'TypeError') {
+                            this.setRequestHeader('X-Body-Data', utf8ToBase64(bodyData));
+                            this.setRequestHeader('X-Body-Encoding', 'base64');
+                        }
+                    }
                 } catch (e) {
-                    console.warn('[IframeInjector] Cannot set X-Body-Data header on XMLHttpRequest');
+                    console.error('[IframeInjector] Cannot set X-Body-Data header on XMLHttpRequest');
                 }
             }
         }

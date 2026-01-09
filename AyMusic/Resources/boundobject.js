@@ -207,5 +207,16 @@ window.boundobject = {
             url: url,
             includes: includes
         });
+    },
+    pickUpMusic: () => {
+        window.boundobject.__manager.callNative('pickUpMusic', {});
+    },
+    openLink: (url) => {
+        window.boundobject.__manager.callNative('openLink', {
+            url: url
+        });
+    },
+    restartApp: () => {
+        window.boundobject.__manager.callNative('restartApp', {});
     }
 };

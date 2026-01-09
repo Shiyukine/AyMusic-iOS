@@ -389,9 +389,11 @@ struct WebView: UIViewRepresentable {
         }
     }
     
-    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKHTTPCookieStoreObserver {
+    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKHTTPCookieStoreObserver, UIDocumentPickerDelegate {
         var parent: WebView
         weak var webView: WKWebView?
+        var filePickerCallbackId: String?
+        var filePickerFrameInfo: WKFrameInfo?
         
         init(_ parent: WebView) {
             self.parent = parent
@@ -584,11 +586,28 @@ struct WebView: UIViewRepresentable {
                 // use UserDefaults
                 let settingFileName = params["fileName"] as? String ?? "default"
                 
-                // Check if the key exists in UserDefaults
-                if let settings = UserDefaults.standard.dictionary(forKey: settingFileName) {
-                    // Key exists - return the settings as JSON
-                    let jsonData = try? JSONSerialization.data(withJSONObject: settings)
-                    if let jsonString = jsonData.flatMap({ String(data: $0, encoding: .utf8) }) {
+                // Try to get value as either array or dictionary
+                var settingsValue: Any? = nil
+                
+                if let array = UserDefaults.standard.array(forKey: settingFileName) {
+                    settingsValue = array
+                } else if let dict = UserDefaults.standard.dictionary(forKey: settingFileName) {
+                    settingsValue = dict
+                }
+                
+                if let value = settingsValue {
+                    // Check if empty
+                    let isEmpty = (value as? [Any])?.isEmpty ?? (value as? [String: Any])?.isEmpty ?? false
+                    if isEmpty {
+                        // Key exists but empty - return null
+                        let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)', null); }"
+                        executeJavaScript(script, in: iframeInfo, webView: webView)
+                        return
+                    }
+                    
+                    // Return the settings as JSON string
+                    if let jsonData = try? JSONSerialization.data(withJSONObject: value),
+                       let jsonString = String(data: jsonData, encoding: .utf8) {
                         let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','\(jsonString)'); }"
                         executeJavaScript(script, in: iframeInfo, webView: webView)
                     }
@@ -602,22 +621,33 @@ struct WebView: UIViewRepresentable {
                 // use UserDefaults
                 let settingFileName = params["fileName"] as? String ?? "default"
                 
-                // Parse content - it might be a JSON string or already a dictionary
-                var settingsDict: [String: Any] = [:]
+                // Parse content - it might be a JSON string (array or object) or already parsed
+                var settingsValue: Any? = nil
                 if let contentString = params["content"] as? String {
-                    // Parse JSON string
+                    // Parse JSON string - could be array or object
                     if let jsonData = contentString.data(using: .utf8),
-                       let parsed = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
-                        settingsDict = parsed
+                       let parsed = try? JSONSerialization.jsonObject(with: jsonData) {
+                        settingsValue = parsed
                     }
-                } else if let contentDict = params["content"] as? [String: Any] {
-                    // Already a dictionary
-                    settingsDict = contentDict
+                } else {
+                    // Already parsed (could be dict or array)
+                    settingsValue = params["content"]
                 }
                 
-                UserDefaults.standard.setValue(settingsDict, forKey: settingFileName)
-                UserDefaults.standard.synchronize()
-                print("💾 Saved settings '\(settingFileName)' with \(settingsDict.count) keys")
+                if let value = settingsValue {
+                    UserDefaults.standard.setValue(value, forKey: settingFileName)
+                    UserDefaults.standard.synchronize()
+                    
+                    if let dict = value as? [String: Any] {
+                        print("💾 Saved settings '\(settingFileName)' with \(dict.count) keys")
+                    } else if let array = value as? [Any] {
+                        print("💾 Saved settings '\(settingFileName)' with \(array.count) items")
+                    } else {
+                        print("💾 Saved settings '\(settingFileName)'")
+                    }
+                } else {
+                    print("⚠️ Failed to parse settings for '\(settingFileName)'")
+                }
 
             case "httpRequestGET":
                 let url = params["url"] as? String ?? ""
@@ -896,7 +926,10 @@ struct WebView: UIViewRepresentable {
                 if !responseDictArray.isEmpty {
                     // Add all override rules from the array
                     for responseDict in responseDictArray {
-                        HTTPResponseModifierProtocol.overrideResponses.append(responseDict)
+                        let platforms = responseDict["platforms"] as? [String] ?? []
+                        if !platforms.isEmpty && platforms.contains("iOS") {
+                            HTTPResponseModifierProtocol.overrideResponses.append(responseDict)
+                        }
                     }
                     
                     print("✅ Registered \(responseDictArray.count) override response rule(s)")
@@ -946,9 +979,160 @@ struct WebView: UIViewRepresentable {
                 let includes: Bool = params["includes"] as? Bool ?? false
                 HTTPResponseModifierProtocol.blockedUrls.append(["url": url, "includes": includes])
 
+            case "pickUpMusic":
+                // Present document picker on main thread
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self, let webView = self.webView else { return }
+                    
+                    // Store callback info for later use
+                    self.filePickerCallbackId = callId
+                    self.filePickerFrameInfo = iframeInfo
+                    
+                    // Get the root view controller
+                    guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                          let rootViewController = windowScene.windows.first?.rootViewController else {
+                        print("⚠️ Cannot get root view controller")
+                        let script = "if(window.listeners && window.listeners.filePickerCallback) { window.listeners.filePickerCallback([]); }"
+                        self.executeJavaScript(script, in: iframeInfo, webView: webView)
+                        return
+                    }
+                    
+                    // Create document picker for audio files
+                    let documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: [.audio])
+                    documentPicker.delegate = self
+                    documentPicker.allowsMultipleSelection = false
+                    
+                    // Present the picker
+                    rootViewController.present(documentPicker, animated: true, completion: nil)
+                }
+                
+            case "openLink":
+                let urlString = params["url"] as? String ?? ""
+                if let url = URL(string: urlString), UIApplication.shared.canOpenURL(url) {
+                    DispatchQueue.main.async {
+                        UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                    }
+                } else {
+                    print("⚠️ Cannot open URL: \(urlString)")
+                }
+                
+            case "restartApp":
+                webView?.reload()
+
             default:
                 print("⚠️ Unknown method: \(method)")
             }
+        }
+        
+        // MARK: - UIDocumentPickerDelegate
+        
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let selectedURL = urls.first else {
+                // User cancelled or no file selected
+                callFilePickerCallback(with: [])
+                return
+            }
+            
+            print("📁 User selected file: \(selectedURL.lastPathComponent)")
+            
+            // Start accessing the security-scoped resource
+            guard selectedURL.startAccessingSecurityScopedResource() else {
+                print("⚠️ Cannot access security-scoped resource")
+                callFilePickerCallback(with: [])
+                return
+            }
+            
+            defer {
+                selectedURL.stopAccessingSecurityScopedResource()
+            }
+            
+            // Get documents directory
+            guard let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                print("⚠️ Cannot access documents directory")
+                callFilePickerCallback(with: [])
+                return
+            }
+            
+            // Create a subdirectory for music if it doesn't exist
+            let musicDir = documentsDir.appendingPathComponent("music", isDirectory: true)
+            try? FileManager.default.createDirectory(at: musicDir, withIntermediateDirectories: true)
+            
+            // Generate destination path
+            let fileName = selectedURL.lastPathComponent
+            let destinationURL = musicDir.appendingPathComponent(fileName)
+            
+            // If file already exists, generate unique name
+            var finalDestinationURL = destinationURL
+            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                let baseName = (fileName as NSString).deletingPathExtension
+                let ext = (fileName as NSString).pathExtension
+                var counter = 1
+                
+                repeat {
+                    let newName = "\(baseName)_\(counter).\(ext)"
+                    finalDestinationURL = musicDir.appendingPathComponent(newName)
+                    counter += 1
+                } while FileManager.default.fileExists(atPath: finalDestinationURL.path)
+            }
+            
+            // Copy the file to documents directory
+            do {
+                try FileManager.default.copyItem(at: selectedURL, to: finalDestinationURL)
+                print("✅ File copied to: \(finalDestinationURL.path)")
+                
+                // Get the relative path from documents directory and URL-encode it
+                let fileName = finalDestinationURL.lastPathComponent
+                let displayName = fileName
+                
+                // URL-encode the filename for the app://localfiles URL
+                guard let encodedFileName = fileName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {
+                    print("❌ Failed to encode filename: \(fileName)")
+                    callFilePickerCallback(with: [])
+                    return
+                }
+                
+                // Build app://localfiles URL with encoded path
+                let appURL = "music/\(encodedFileName)"
+                
+                // Call back to JavaScript with file info
+                // Format: [["url", "displayName"]]
+                callFilePickerCallback(with: [[appURL, displayName]])
+                
+            } catch {
+                print("❌ Error copying file: \(error.localizedDescription)")
+                callFilePickerCallback(with: [])
+            }
+        }
+        
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            print("📱 User cancelled document picker")
+            callFilePickerCallback(with: [])
+        }
+        
+        private func callFilePickerCallback(with files: [[String]]) {
+            // Convert array to JSON string
+            var jsonString = "[]"
+            if !files.isEmpty {
+                // Build: [["url", "name"]]
+                let items = files.map { file in
+                    let url = file[0].replacingOccurrences(of: "\\", with: "\\\\")
+                        .replacingOccurrences(of: "'", with: "\\'") 
+                    let name = file[1].replacingOccurrences(of: "\\", with: "\\\\")
+                        .replacingOccurrences(of: "'", with: "\\'")
+                    return "['\(url)','\(name)']"
+                }.joined(separator: ",")
+                jsonString = "[\(items)]"
+            }
+            
+            let script = "if(window.listeners && window.listeners.filePickerCallback) { window.listeners.filePickerCallback(\(jsonString)); }"
+            
+            DispatchQueue.main.async { [weak self] in
+                self?.executeJavaScript(script, in: self?.filePickerFrameInfo, webView: self?.webView)
+            }
+            
+            // Clear callback info
+            filePickerCallbackId = nil
+            filePickerFrameInfo = nil
         }
     }
 }

@@ -25,7 +25,7 @@ struct WebViewTest: UIViewRepresentable {
 
         // ⚠️ PRIVATE API: Register http/https schemes with NSURLProtocol
         // This allows us to intercept and modify response headers like Android
-        // registerPrivateAPIForHTTPInterception()
+        registerPrivateAPIForHTTPInterception()
         
         // Modern way to enable JavaScript (iOS 14+)
         let preferences = WKWebpagePreferences()
@@ -97,7 +97,7 @@ struct WebViewTest: UIViewRepresentable {
                 forMainFrameOnly: false,  // Run in ALL frames including iframes
                 in: .page
             )
-            //userContentController.addUserScript(injectorScript)
+            userContentController.addUserScript(injectorScript)
         } else {
             // Fallback for iOS 13 and earlier
             let script = WKUserScript(source: boundObjectScript, injectionTime: .atDocumentStart, forMainFrameOnly: false)
@@ -105,7 +105,7 @@ struct WebViewTest: UIViewRepresentable {
             
             // Add iframe script injection loader
             let injectorScript = WKUserScript(source: overridesScript, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-            //userContentController.addUserScript(injectorScript)
+            userContentController.addUserScript(injectorScript)
         }
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
@@ -121,14 +121,17 @@ struct WebViewTest: UIViewRepresentable {
         context.coordinator.webView = webView
 
         let userAgent = webView.value(forKey: "userAgent") as? String ?? ""
+        print(userAgent)
         // Extract iOS version (e.g., 18_6)
-        let iosVersionPattern = #"iPhone OS ([\d_]+)"#
+        let iosVersionPattern = [#"iPhone OS ([\d_]+)"#, #"iPad OS ([\d_]+)"#, #"CPU OS ([\d_]+)"#]
         let iosVersion: String = {
-            let regex = try? NSRegularExpression(pattern: iosVersionPattern)
-            let nsString = userAgent as NSString
-            if let match = regex?.firstMatch(in: userAgent, range: NSRange(location: 0, length: nsString.length)),
-            match.numberOfRanges > 1 {
-                return nsString.substring(with: match.range(at: 1)).replacingOccurrences(of: "_", with: ".")
+            for pattern in iosVersionPattern {
+                let regex = try? NSRegularExpression(pattern: pattern)
+                let nsString = userAgent as NSString
+                if let match = regex?.firstMatch(in: userAgent, range: NSRange(location: 0, length: nsString.length)),
+                   match.numberOfRanges > 1 {
+                    return nsString.substring(with: match.range(at: 1)).replacingOccurrences(of: "_", with: ".")
+                }
             }
             return "0.0"
         }()
@@ -149,6 +152,9 @@ struct WebViewTest: UIViewRepresentable {
         let macDevice = "(Macintosh; Intel Mac OS X 10_15_7)"
         var newUA = userAgent
             .replacingOccurrences(of: #"\(iPhone; CPU iPhone OS [^)]*\)"#, with: macDevice, options: .regularExpression)
+            .replacingOccurrences(of: #"\(iPhone; CPU OS [^)]*\)"#, with: macDevice, options: .regularExpression)
+            .replacingOccurrences(of: #"\(iPad; CPU OS [^)]*\)"#, with: macDevice, options: .regularExpression)
+            .replacingOccurrences(of: #"\(iPad; CPU iPad OS [^)]*\)"#, with: macDevice, options: .regularExpression)
             .replacingOccurrences(of: #" Mobile/[\w\d]+"#, with: "", options: .regularExpression)
         
         // Remove any existing Version/xxx and Safari/xxx
@@ -159,8 +165,7 @@ struct WebViewTest: UIViewRepresentable {
         newUA += " Version/\(iosVersion) Safari/\(webkitVersion)"
         
         // Set custom user agent
-        //webView.customUserAgent = newUA
-        webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+        webView.customUserAgent = newUA
         
         // Enable inspection (Safari Web Inspector)
         if #available(iOS 16.4, *) {
