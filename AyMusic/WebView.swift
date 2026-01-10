@@ -412,10 +412,15 @@ struct WebView: UIViewRepresentable {
             
             // Check if this is a debug or release build
             #if DEBUG
-            let isPackaged = "false"
+            var isPackaged = "false"
             #else
-            let isPackaged = "true"
+            var isPackaged = "true"
             #endif
+
+            let isDevMode = UserDefaults.standard.bool(forKey: "dev_mode_enabled")
+            if !isDevMode {
+                isPackaged = "true"
+            }
             
             let script = """
             var intev = setInterval(() => {
