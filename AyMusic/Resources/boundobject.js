@@ -28,14 +28,6 @@ window.boundobject = {
             return callId;
         },
     },
-    getDeviceInfo: async () => {
-        return new Promise((resolve) => {
-            let callId = window.boundobject.__manager.addCallback((data) => {
-                resolve(data);
-            });
-            window.boundobject.__manager.callNative('getDeviceInfo', {}, callId);
-        });
-    },
     getSettingFile: () => {
         return new Promise((resolve) => {
             let callId = window.boundobject.__manager.addCallback((data) => {
@@ -141,7 +133,7 @@ window.boundobject = {
             });
             window.boundobject.__manager.callNative('haveCookie', {
                 url: url,
-                cookieName: cookieName
+                name: cookieName
             }, callId);
         });
     },

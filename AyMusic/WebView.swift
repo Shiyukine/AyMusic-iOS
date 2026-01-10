@@ -836,9 +836,23 @@ struct WebView: UIViewRepresentable {
                 let cookieStore = webView?.configuration.websiteDataStore.httpCookieStore
                 cookieStore?.getAllCookies { [weak self] cookies in
                     let exists = cookies.contains { $0.name == name && url.contains($0.domain) }
-                    let content = exists ? cookies.first { $0.name == name && url.contains($0.domain) }?.value ?? "" : ""
-                    let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','\(content)'); }"
-                    self?.executeJavaScript(script, in: iframeInfo, webView: webView)
+                    if exists {
+                        let content = cookies.first { $0.name == name && url.contains($0.domain) }?.value
+                        let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','\(content ?? "")'); }"
+                        self?.executeJavaScript(script, in: iframeInfo, webView: webView)
+                    }
+                    else {
+                        let existsInStorage = HTTPCookieStorage.shared.cookies?.contains { $0.name == name && url.contains($0.domain) } ?? false
+                        if existsInStorage {
+                            let content = HTTPCookieStorage.shared.cookies?.first { $0.name == name && url.contains($0.domain) }?.value
+                            let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','\(content ?? "")'); }"
+                            self?.executeJavaScript(script, in: iframeInfo, webView: webView)
+                        }
+                        else {
+                            let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)',''); }"
+                            self?.executeJavaScript(script, in: iframeInfo, webView: webView)
+                        }
+                    }
                 }
 
             case "cacheRequestBody":
