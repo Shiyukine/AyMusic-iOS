@@ -29,8 +29,6 @@
 			</dict>
 		</dict>
 	</dict>
-	<key>NSCrossWebsiteTrackingUsageDescription</key>
-	<string>This app requires cross-website tracking to enable authentication in embedded web content.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

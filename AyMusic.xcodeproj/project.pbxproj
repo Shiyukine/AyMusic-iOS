@@ -27,8 +27,6 @@
 		E54228222E490A8400D73384 /* AyMusic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AyMusic.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E54228312E490A8700D73384 /* AyMusicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AyMusicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E542283B2E490A8700D73384 /* AyMusicUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AyMusicUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		E5D2D5112F1174EF00B437AF /* AyMusic copy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "AyMusic copy.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		E5D2D5132F1174EF00B437AF /* AyMusic copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "AyMusic copy-Info.plist"; path = "/Users/shiyukine/Documents/AyMusic-iOS/AyMusic/AyMusic copy-Info.plist"; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -39,29 +37,6 @@
 			);
 			target = E54228212E490A8400D73384 /* AyMusic */;
 		};
-		E5D2D5122F1174EF00B437AF /* Exceptions for "AyMusic" folder in "AyMusic copy" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				ContentView.swift,
-				ExtWebView.swift,
-				Helpers.swift,
-				Info.plist,
-				Resources/boundobject.js,
-				Resources/HTML,
-				Resources/overrides.js,
-				Schemes/AppURLSchemeHandler.swift,
-				Schemes/CacheURLSchemeHandler.swift,
-				Schemes/HTTPResponseModifierProtocol.swift,
-				Schemes/LocalFilesURLSchemeHandler.swift,
-				ScriptInjecter.swift,
-				TestOnly/ContentViewTest.swift,
-				TestOnly/WebViewTest.swift,
-				UpdateManager.swift,
-				Utils.swift,
-				WebView.swift,
-			);
-			target = E5D2D50A2F1174EF00B437AF /* AyMusic copy */;
-		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -69,7 +44,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				E52108762EFF79E400275121 /* Exceptions for "AyMusic" folder in "AyMusic" target */,
-				E5D2D5122F1174EF00B437AF /* Exceptions for "AyMusic" folder in "AyMusic copy" target */,
 			);
 			explicitFolders = (
 				Resources/HTML,
@@ -111,13 +85,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		E5D2D50C2F1174EF00B437AF /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -127,7 +94,6 @@
 				E54228242E490A8400D73384 /* AyMusic */,
 				E54228342E490A8700D73384 /* AyMusicTests */,
 				E542283E2E490A8700D73384 /* AyMusicUITests */,
-				E5D2D5132F1174EF00B437AF /* AyMusic copy-Info.plist */,
 				E54228232E490A8400D73384 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -138,7 +104,6 @@
 				E54228222E490A8400D73384 /* AyMusic.app */,
 				E54228312E490A8700D73384 /* AyMusicTests.xctest */,
 				E542283B2E490A8700D73384 /* AyMusicUITests.xctest */,
-				E5D2D5112F1174EF00B437AF /* AyMusic copy.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -214,28 +179,6 @@
 			productReference = E542283B2E490A8700D73384 /* AyMusicUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		E5D2D50A2F1174EF00B437AF /* AyMusic copy */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = E5D2D50E2F1174EF00B437AF /* Build configuration list for PBXNativeTarget "AyMusic copy" */;
-			buildPhases = (
-				E5D2D50B2F1174EF00B437AF /* Sources */,
-				E5D2D50C2F1174EF00B437AF /* Frameworks */,
-				E5D2D50D2F1174EF00B437AF /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				E54228242E490A8400D73384 /* AyMusic */,
-			);
-			name = "AyMusic copy";
-			packageProductDependencies = (
-			);
-			productName = AyMusic;
-			productReference = E5D2D5112F1174EF00B437AF /* AyMusic copy.app */;
-			productType = "com.apple.product-type.application";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -276,7 +219,6 @@
 				E54228212E490A8400D73384 /* AyMusic */,
 				E54228302E490A8700D73384 /* AyMusicTests */,
 				E542283A2E490A8700D73384 /* AyMusicUITests */,
-				E5D2D50A2F1174EF00B437AF /* AyMusic copy */,
 			);
 		};
 /* End PBXProject section */
@@ -303,13 +245,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		E5D2D50D2F1174EF00B437AF /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -328,13 +263,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E54228372E490A8700D73384 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		E5D2D50B2F1174EF00B437AF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -410,7 +338,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -469,7 +397,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -488,7 +416,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = AyMusic/AyMusic.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = DR4PN6HA2U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -502,12 +430,12 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3.7;
+				MARKETING_VERSION = 0.3.8;
 				PRODUCT_BUNDLE_IDENTIFIER = Shiyukine.AyMusic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -524,7 +452,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = AyMusic/AyMusic.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = DR4PN6HA2U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -538,12 +466,12 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3.7;
+				MARKETING_VERSION = 0.3.8;
 				PRODUCT_BUNDLE_IDENTIFIER = Shiyukine.AyMusic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -624,78 +552,6 @@
 			};
 			name = Release;
 		};
-		E5D2D50F2F1174EF00B437AF /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = AyMusic/AyMusic.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
-				DEVELOPMENT_TEAM = DR4PN6HA2U;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = AyMusic/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = AyMusic;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
-				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need to access to your media library if you want to add songs to your playlists";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Dev only";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 0.3.7;
-				PRODUCT_BUNDLE_IDENTIFIER = Shiyukine.AyMusic;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		E5D2D5102F1174EF00B437AF /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = AyMusic/AyMusic.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
-				DEVELOPMENT_TEAM = DR4PN6HA2U;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = AyMusic/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = AyMusic;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
-				INFOPLIST_KEY_NSAppleMusicUsageDescription = "We need to access to your media library if you want to add songs to your playlists";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Dev only";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 0.3.7;
-				PRODUCT_BUNDLE_IDENTIFIER = Shiyukine.AyMusic;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -731,15 +587,6 @@
 			buildConfigurations = (
 				E542284C2E490A8700D73384 /* Debug */,
 				E542284D2E490A8700D73384 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		E5D2D50E2F1174EF00B437AF /* Build configuration list for PBXNativeTarget "AyMusic copy" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				E5D2D50F2F1174EF00B437AF /* Debug */,
-				E5D2D5102F1174EF00B437AF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

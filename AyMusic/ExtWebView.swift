@@ -64,7 +64,7 @@ struct ExtWebView: UIViewRepresentable {
 
         // Inject the boundobject JavaScript interface
         guard let data2 = try? Data(contentsOf: URL(fileURLWithPath: "\(baseDirectory)/overrides.js")) else {
-            print("❌ Cannot read overrides.js")
+            print("Cannot read overrides.js")
             return WKWebView(frame: .zero, configuration: configuration)
         }
         
@@ -143,7 +143,7 @@ struct ExtWebView: UIViewRepresentable {
         // Restore cookies from HTTPCookieStorage to WKWebView on startup
         // This ensures cookies persist across app restarts
         if let cookies = HTTPCookieStorage.shared.cookies {
-            print("🔄 Restoring \(cookies.count) cookies from HTTPCookieStorage to WKWebView")
+            print("Restoring \(cookies.count) cookies from HTTPCookieStorage to WKWebView")
             for cookie in cookies {
                 configuration.websiteDataStore.httpCookieStore.setCookie(cookie) 
             }
@@ -197,7 +197,7 @@ struct ExtWebView: UIViewRepresentable {
             // Sync cookie to WKWebView's cookie store so JavaScript can access it
             webView.configuration.websiteDataStore.httpCookieStore.setCookie(cookie) {
                 // Debug: Verify cookie is accessible
-                print("✅ [Cookie Sync] Synced to ExtWKWebView: \(cookie.name)")
+                print("[Cookie Sync] Synced to ExtWKWebView: \(cookie.name)")
             }
         }
         
@@ -206,7 +206,7 @@ struct ExtWebView: UIViewRepresentable {
         // This is the NATIVE solution to capture cookies from iframe POST redirects!
         func cookiesDidChange(in cookieStore: WKHTTPCookieStore) {
             cookieStore.getAllCookies { cookies in
-                // print("🍪 [Native Observer] Cookie store changed! Total cookies: \(cookies.count)")
+                // print("[Native Observer] Cookie store changed! Total cookies: \(cookies.count)")
                 
                 // Sync all cookies to HTTPCookieStorage for persistence across app restarts
                 for cookie in cookies {
@@ -219,7 +219,7 @@ struct ExtWebView: UIViewRepresentable {
             // Debug: Check all cookies after navigation completes
             webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { cookies in
                 if cookies.isEmpty {
-                    print("⚠️ [didFinish] No cookies found in WKHTTPCookieStore")
+                    print("[didFinish] No cookies found in WKHTTPCookieStore")
                 }
             }
             if(parent.willClose){
@@ -248,10 +248,6 @@ struct ExtWebView: UIViewRepresentable {
             // CRITICAL: Manually handle cookies from redirect responses (302, 301, etc.)
             // WKWebView doesn't automatically set cookies from redirect responses
             if let httpResponse = navigationResponse.response as? HTTPURLResponse {
-                let statusCode = httpResponse.statusCode
-                let url = httpResponse.url?.absoluteString ?? "unknown"
-                let frameType = navigationResponse.isForMainFrame ? "[Main Frame]" : "[iFrame]"
-                
                 // Handle Set-Cookie headers, especially important for redirects
                 if let allHeaders = httpResponse.allHeaderFields as? [String: String],
                    let responseUrl = httpResponse.url {
@@ -260,7 +256,7 @@ struct ExtWebView: UIViewRepresentable {
                     let cookies = HTTPCookie.cookies(withResponseHeaderFields: allHeaders, for: responseUrl)
                     
                     if !cookies.isEmpty {
-                        // print("   🍪 Found \(cookies.count) cookie(s) from response (status: \(statusCode))")
+                        // print("   Found \(cookies.count) cookie(s) from response (status: \(statusCode))")
                         
                         // Manually set each cookie in the WKWebView's cookie store
                         let cookieStore = webView.configuration.websiteDataStore.httpCookieStore
@@ -270,14 +266,6 @@ struct ExtWebView: UIViewRepresentable {
                             
                             // Also set in shared HTTPCookieStorage for consistency
                             HTTPCookieStorage.shared.setCookie(cookie)
-                        }
-                    }
-                    
-                    // Debug logging for redirects
-                    if statusCode >= 300 && statusCode < 400 {
-                        print("   🔄 Redirect (\(statusCode)) detected")
-                        if let location = allHeaders["Location"] {
-                            print("   → Redirecting to: \(location)")
                         }
                     }
                 }
@@ -311,11 +299,11 @@ struct ExtWebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            print("❌ Failed to load: \(error.localizedDescription)")
+            print("Failed to load: \(error.localizedDescription)")
         }
         
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            print("❌ Failed provisional navigation: \(error.localizedDescription)")
+            print("Failed provisional navigation: \(error.localizedDescription)")
         }
     }
 }

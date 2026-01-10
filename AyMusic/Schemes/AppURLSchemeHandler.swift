@@ -46,7 +46,7 @@ class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
         // app://cache/file.json -> host = "cache"
         // app://localfiles/file.json -> host = "localfiles"
         guard let host = url.host else {
-            print("⚠️ No host in app:// URL: \(url.absoluteString)")
+            print("No host in app:// URL: \(url.absoluteString)")
             urlSchemeTask.didFailWithError(NSError(domain: "AppSchemeHandler", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid app:// URL format"]))
             return
         }
@@ -58,7 +58,7 @@ class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
         }
         
         if path.isEmpty && host != "root" {
-            print("⚠️ Empty path in app:// request")
+            print("Empty path in app:// request")
             urlSchemeTask.didFailWithError(NSError(domain: NSURLErrorDomain, code: NSURLErrorFileDoesNotExist, userInfo: nil))
             return
         }
@@ -74,16 +74,16 @@ class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
         switch host {
         case "cache":
             baseDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
-        case "localfiles":
+        case "localfiles", "data":
             baseDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
         default:
-            print("⚠️ Unknown app:// host: \(host)")
+            print("Unknown app:// host: \(host)")
             urlSchemeTask.didFailWithError(NSError(domain: "AppSchemeHandler", code: -3, userInfo: [NSLocalizedDescriptionKey: "Unknown host: \(host)"]))
             return
         }
         
         guard let directory = baseDir else {
-            print("⚠️ Cannot access \(host) directory")
+            print("Cannot access \(host) directory")
             urlSchemeTask.didFailWithError(NSError(domain: "AppSchemeHandler", code: -4, userInfo: [NSLocalizedDescriptionKey: "Cannot access directory"]))
             return
         }
@@ -92,7 +92,7 @@ class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
         let fileURL = directory.appendingPathComponent(path)
         
         guard let data = try? Data(contentsOf: fileURL) else {
-            print("❌ File not found in \(host): \(fileURL.path)")
+            print("File not found in \(host): \(fileURL.path)")
             urlSchemeTask.didFailWithError(NSError(domain: NSURLErrorDomain, code: NSURLErrorFileDoesNotExist, userInfo: nil))
             return
         }
@@ -112,7 +112,7 @@ class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
             ]
         )!
         
-        print("✅ Loaded from \(host): \(path)")
+        print("Loaded from \(host): \(path)")
         
         urlSchemeTask.didReceive(response)
         urlSchemeTask.didReceive(data)
@@ -155,7 +155,7 @@ class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
             }
         }
         
-        guard let data = data, let fileURL = fileURL else {
+        guard let data = data, let _ = fileURL else {
             print("Not found: \(resourcePath)")
             print("Expected: HTML/\(subdirectory.isEmpty ? "" : "\(subdirectory)/")\(fileName).\(fileExtension)")
             urlSchemeTask.didFailWithError(NSError(domain: NSURLErrorDomain, code: NSURLErrorFileDoesNotExist, userInfo: nil))
@@ -197,6 +197,10 @@ class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
         case "woff2": return "font/woff2"
         case "ttf": return "font/ttf"
         case "mp3": return "audio/mpeg"
+        case "m4a", "aac": return "audio/mp4"
+        case "ogg", "oga": return "audio/ogg"
+        case "opus": return "audio/opus"
+        case "flac": return "audio/flac"
         case "wav": return "audio/wav"
         case "mp4": return "video/mp4"
         case "webm": return "video/webm"

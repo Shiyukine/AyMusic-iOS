@@ -23,7 +23,7 @@ struct WebViewTest: UIViewRepresentable {
         let baseDirectory = resourcePath
         let configuration = WKWebViewConfiguration()
 
-        // ⚠️ PRIVATE API: Register http/https schemes with NSURLProtocol
+        // PRIVATE API: Register http/https schemes with NSURLProtocol
         // This allows us to intercept and modify response headers like Android
         registerPrivateAPIForHTTPInterception()
         
@@ -66,7 +66,7 @@ struct WebViewTest: UIViewRepresentable {
         
         // Inject the boundobject JavaScript interface
         guard let data = try? Data(contentsOf: URL(fileURLWithPath: "\(baseDirectory)/boundobject.js")) else {
-            print("❌ Cannot read boundobject.js")
+            print("Cannot read boundobject.js")
             return WKWebView(frame: .zero, configuration: configuration)
         }
         
@@ -74,7 +74,7 @@ struct WebViewTest: UIViewRepresentable {
 
         // Inject the boundobject JavaScript interface
         guard let data2 = try? Data(contentsOf: URL(fileURLWithPath: "\(baseDirectory)/overrides.js")) else {
-            print("❌ Cannot read overrides.js")
+            print("Cannot read overrides.js")
             return WKWebView(frame: .zero, configuration: configuration)
         }
         
@@ -195,16 +195,16 @@ struct WebViewTest: UIViewRepresentable {
         // Use private API to make WKWebView use NSURLProtocol for http/https
         guard let contextControllerClass = NSClassFromString("WKBrowsingContextController") as? NSObject.Type,
               let registerSchemeSelector = NSSelectorFromString("registerSchemeForCustomProtocol:") as? Selector else {
-            print("⚠️ [Private API] Failed to load WKBrowsingContextController")
+            print("[Private API] Failed to load WKBrowsingContextController")
             return
         }
         
         if contextControllerClass.responds(to: registerSchemeSelector) {
             _ = contextControllerClass.perform(registerSchemeSelector, with: "http")
             _ = contextControllerClass.perform(registerSchemeSelector, with: "https")
-            print("✅ [Private API] Registered http/https schemes with NSURLProtocol")
+            print("[Private API] Registered http/https schemes with NSURLProtocol")
         } else {
-            print("⚠️ [Private API] WKBrowsingContextController doesn't respond to registerSchemeForCustomProtocol:")
+            print("[Private API] WKBrowsingContextController doesn't respond to registerSchemeForCustomProtocol:")
         }
     }
     
@@ -239,7 +239,7 @@ struct WebViewTest: UIViewRepresentable {
             // Sync cookie to WKWebView's cookie store so JavaScript can access it
             webView.configuration.websiteDataStore.httpCookieStore.setCookie(cookie) {
                 // Debug: Verify cookie is accessible
-                print("✅ [Cookie Sync] Synced to TestWKWebView: \(cookie.name)")
+                print("[Cookie Sync] Synced to TestWKWebView: \(cookie.name)")
             }
         }
         
@@ -248,7 +248,7 @@ struct WebViewTest: UIViewRepresentable {
         // This is the NATIVE solution to capture cookies from iframe POST redirects!
         func cookiesDidChange(in cookieStore: WKHTTPCookieStore) {
             cookieStore.getAllCookies { cookies in
-                // print("🍪 [Native Observer] Cookie store changed! Total cookies: \(cookies.count)")
+                // print("[Native Observer] Cookie store changed! Total cookies: \(cookies.count)")
                 
                 // Sync all cookies to HTTPCookieStorage for persistence across app restarts
                 for cookie in cookies {
@@ -277,11 +277,11 @@ struct WebViewTest: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            print("❌ Failed to load: \(error.localizedDescription)")
+            print("Failed to load: \(error.localizedDescription)")
         }
         
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            print("❌ Failed provisional navigation: \(error.localizedDescription)")
+            print("Failed provisional navigation: \(error.localizedDescription)")
         }
         
         // MARK: - Helper Methods
@@ -299,7 +299,7 @@ struct WebViewTest: UIViewRepresentable {
                     case .success(let value):
                         completion?(.success(value))
                     case .failure(let error):
-                        print("❌ JS execution error: \(error)")
+                        print("JS execution error: \(error)")
                         completion?(.failure(error))
                     }
                 }
@@ -327,13 +327,13 @@ struct WebViewTest: UIViewRepresentable {
             case "boundobject":
                 handleBoundObjectCall(body: body, webView: message.webView, iframeInfo: message.frameInfo)
             default:
-                print("⚠️ Unknown message name: \(message.name)")
+                print("Unknown message name: \(message.name)")
             }
         }
 
         private func handleBoundObjectCall(body: [String: Any], webView: WKWebView?, iframeInfo: WKFrameInfo? = nil) {
             guard let method = body["method"] as? String else {
-                print("⚠️ No method specified")
+                print("No method specified")
                 return
             }
             
@@ -353,11 +353,11 @@ struct WebViewTest: UIViewRepresentable {
                     HTTPResponseModifierProtocol.cacheLock.unlock()
                     let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)',true); }"
                     executeJavaScript(script, in: iframeInfo, webView: webView)
-                    print("✅ Cached body data for URL: \(url) (length: \(body.count))")
+                    print("Cached body data for URL: \(url) (length: \(body.count))")
                 }
 
             default:
-                print("⚠️ Unknown method: \(method)")
+                print("Unknown method: \(method)")
             }
         }
     }

@@ -28,19 +28,16 @@ struct WebView: UIViewRepresentable {
         let baseDirectory = resourcePath
         let configuration = WKWebViewConfiguration()
         
-        // ⚠️ PRIVATE API: Register http/https schemes with NSURLProtocol
-        // This allows us to intercept and modify response headers like Android
+        // PRIVATE API: Register http/https schemes with NSURLProtocol
+        // This allows us to intercept and modify response headers
         registerPrivateAPIForHTTPInterception()
-        
-        // Share process pool to enable cookie sharing across all webviews
-        let pool = WKProcessPool()
-        let selector = NSSelectorFromString("_registerURLSchemeAsSecure:")
-        pool.perform(selector, with: NSString(string: "app"))
-        configuration.processPool = pool
         
         // Register app:// scheme for root (bundle), cache, and localfiles access
         let appSchemeHandler = AppURLSchemeHandler(baseDirectory: baseDirectory)
         configuration.setURLSchemeHandler(appSchemeHandler, forURLScheme: "app")
+        
+        let selector = NSSelectorFromString("_registerURLSchemeAsSecure:")
+        configuration.processPool.perform(selector, with: NSString(string: "app"))
         
         // Modern way to enable JavaScript (iOS 14+)
         let preferences = WKWebpagePreferences()
@@ -67,11 +64,6 @@ struct WebView: UIViewRepresentable {
         // Disable incremental rendering to ensure cookies are set before page loads
         configuration.suppressesIncrementalRendering = false
         
-        // Configure cookie handling to accept third-party cookies (for iframes)
-        if #available(iOS 14.0, *) {
-            configuration.defaultWebpagePreferences.allowsContentJavaScript = true
-        }
-        
         // Setup JavaScript bridge - inject boundobject
         let userContentController = WKUserContentController()
         userContentController.add(context.coordinator, name: "boundobject")
@@ -79,7 +71,7 @@ struct WebView: UIViewRepresentable {
         
         // Inject the boundobject JavaScript interface
         guard let data = try? Data(contentsOf: URL(fileURLWithPath: "\(baseDirectory)/boundobject.js")) else {
-            print("❌ Cannot read boundobject.js")
+            print("Cannot read boundobject.js")
             return WKWebView(frame: .zero, configuration: configuration)
         }
         
@@ -87,7 +79,7 @@ struct WebView: UIViewRepresentable {
 
         // Inject the boundobject JavaScript interface
         guard let data2 = try? Data(contentsOf: URL(fileURLWithPath: "\(baseDirectory)/overrides.js")) else {
-            print("❌ Cannot read overrides.js")
+            print("Cannot read overrides.js")
             return WKWebView(frame: .zero, configuration: configuration)
         }
         
@@ -202,7 +194,7 @@ struct WebView: UIViewRepresentable {
         // Restore cookies from HTTPCookieStorage to WKWebView on startup
         // This ensures cookies persist across app restarts
         if let cookies = HTTPCookieStorage.shared.cookies {
-            print("🔄 Restoring \(cookies.count) cookies from HTTPCookieStorage to WKWebView")
+            print("Restoring \(cookies.count) cookies from HTTPCookieStorage to WKWebView")
             for cookie in cookies {
                 configuration.websiteDataStore.httpCookieStore.setCookie(cookie) 
             }
@@ -314,13 +306,13 @@ struct WebView: UIViewRepresentable {
         // Re-add boundobject script
         guard let data = try? Data(contentsOf: URL(fileURLWithPath: "\(resourcePath)/boundobject.js")),
               let boundObjectScript = String(data: data, encoding: .utf8) else {
-            print("❌ Cannot read boundobject.js")
+            print("Cannot read boundobject.js")
             return
         }
         
         guard let data2 = try? Data(contentsOf: URL(fileURLWithPath: "\(resourcePath)/overrides.js")),
               let overridesScript = String(data: data2, encoding: .utf8) else {
-            print("❌ Cannot read overrides.js")
+            print("Cannot read overrides.js")
             return
         }
         
@@ -376,16 +368,16 @@ struct WebView: UIViewRepresentable {
         // Use private API to make WKWebView use NSURLProtocol for http/https
         guard let contextControllerClass = NSClassFromString("WKBrowsingContextController") as? NSObject.Type,
               let registerSchemeSelector = NSSelectorFromString("registerSchemeForCustomProtocol:") as? Selector else {
-            print("⚠️ [Private API] Failed to load WKBrowsingContextController")
+            print("[Private API] Failed to load WKBrowsingContextController")
             return
         }
         
         if contextControllerClass.responds(to: registerSchemeSelector) {
             _ = contextControllerClass.perform(registerSchemeSelector, with: "http")
             _ = contextControllerClass.perform(registerSchemeSelector, with: "https")
-            print("✅ [Private API] Registered http/https schemes with NSURLProtocol")
+            print("[Private API] Registered http/https schemes with NSURLProtocol")
         } else {
-            print("⚠️ [Private API] WKBrowsingContextController doesn't respond to registerSchemeForCustomProtocol:")
+            print("[Private API] WKBrowsingContextController doesn't respond to registerSchemeForCustomProtocol:")
         }
     }
     
@@ -404,7 +396,7 @@ struct WebView: UIViewRepresentable {
         // This is the NATIVE solution to capture cookies from iframe POST redirects!
         func cookiesDidChange(in cookieStore: WKHTTPCookieStore) {
             cookieStore.getAllCookies { cookies in
-                // print("🍪 [Native Observer] Cookie store changed! Total cookies: \(cookies.count)")
+                // print("[Native Observer] Cookie store changed! Total cookies: \(cookies.count)")
                 
                 // Sync all cookies to HTTPCookieStorage for persistence across app restarts
                 for cookie in cookies {
@@ -441,13 +433,6 @@ struct WebView: UIViewRepresentable {
             """
             
             webView.evaluateJavaScript(script, completionHandler: nil)
-            
-            // Debug: Check all cookies after navigation completes
-            webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { cookies in
-                if cookies.isEmpty {
-                    print("⚠️ [didFinish] No cookies found in WKHTTPCookieStore")
-                }
-            }
         }
         
         // MARK: - Request Interception (Native Level)
@@ -460,11 +445,7 @@ struct WebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
             // CRITICAL: Manually handle cookies from redirect responses (302, 301, etc.)
             // WKWebView doesn't automatically set cookies from redirect responses
-            if let httpResponse = navigationResponse.response as? HTTPURLResponse {
-                let statusCode = httpResponse.statusCode
-                let url = httpResponse.url?.absoluteString ?? "unknown"
-                let frameType = navigationResponse.isForMainFrame ? "[Main Frame]" : "[iFrame]"
-                
+            if let httpResponse = navigationResponse.response as? HTTPURLResponse {                
                 // Handle Set-Cookie headers, especially important for redirects
                 if let allHeaders = httpResponse.allHeaderFields as? [String: String],
                    let responseUrl = httpResponse.url {
@@ -473,7 +454,7 @@ struct WebView: UIViewRepresentable {
                     let cookies = HTTPCookie.cookies(withResponseHeaderFields: allHeaders, for: responseUrl)
                     
                     if !cookies.isEmpty {
-                        // print("   🍪 Found \(cookies.count) cookie(s) from response (status: \(statusCode))")
+                        // print("   Found \(cookies.count) cookie(s) from response (status: \(statusCode))")
                         
                         // Manually set each cookie in the WKWebView's cookie store
                         let cookieStore = webView.configuration.websiteDataStore.httpCookieStore
@@ -483,14 +464,6 @@ struct WebView: UIViewRepresentable {
                             
                             // Also set in shared HTTPCookieStorage for consistency
                             HTTPCookieStorage.shared.setCookie(cookie)
-                        }
-                    }
-                    
-                    // Debug logging for redirects
-                    if statusCode >= 300 && statusCode < 400 {
-                        print("   🔄 Redirect (\(statusCode)) detected")
-                        if let location = allHeaders["Location"] {
-                            print("   → Redirecting to: \(location)")
                         }
                     }
                 }
@@ -505,7 +478,7 @@ struct WebView: UIViewRepresentable {
             if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
                 if let serverTrust = challenge.protectionSpace.serverTrust {
                     let credential = URLCredential(trust: serverTrust)
-                    print("🔓 [SSL Bypass] Accepting self-signed cert for: \(challenge.protectionSpace.host)")
+                    print("[SSL Bypass] Accepting self-signed cert for: \(challenge.protectionSpace.host)")
                     completionHandler(.useCredential, credential)
                     return
                 }
@@ -517,11 +490,11 @@ struct WebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            print("❌ Failed to load: \(error.localizedDescription)")
+            print("Failed to load: \(error.localizedDescription)")
         }
         
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            print("❌ Failed provisional navigation: \(error.localizedDescription)")
+            print("Failed provisional navigation: \(error.localizedDescription)")
         }
         
         // MARK: - Helper Methods
@@ -539,7 +512,7 @@ struct WebView: UIViewRepresentable {
                     case .success(let value):
                         completion?(.success(value))
                     case .failure(let error):
-                        print("❌ JS execution error: \(error)")
+                        print("JS execution error: \(error)")
                         completion?(.failure(error))
                     }
                 }
@@ -567,13 +540,13 @@ struct WebView: UIViewRepresentable {
             case "boundobject":
                 handleBoundObjectCall(body: body, webView: message.webView, iframeInfo: message.frameInfo)
             default:
-                print("⚠️ Unknown message name: \(message.name)")
+                print("Unknown message name: \(message.name)")
             }
         }
 
         private func handleBoundObjectCall(body: [String: Any], webView: WKWebView?, iframeInfo: WKFrameInfo? = nil) {
             guard let method = body["method"] as? String else {
-                print("⚠️ No method specified")
+                print("No method specified")
                 return
             }
             
@@ -639,14 +612,14 @@ struct WebView: UIViewRepresentable {
                     UserDefaults.standard.synchronize()
                     
                     if let dict = value as? [String: Any] {
-                        print("💾 Saved settings '\(settingFileName)' with \(dict.count) keys")
+                        print("Saved settings '\(settingFileName)' with \(dict.count) keys")
                     } else if let array = value as? [Any] {
-                        print("💾 Saved settings '\(settingFileName)' with \(array.count) items")
+                        print("Saved settings '\(settingFileName)' with \(array.count) items")
                     } else {
-                        print("💾 Saved settings '\(settingFileName)'")
+                        print("Saved settings '\(settingFileName)'")
                     }
                 } else {
-                    print("⚠️ Failed to parse settings for '\(settingFileName)'")
+                    print("Failed to parse settings for '\(settingFileName)'")
                 }
 
             case "httpRequestGET":
@@ -669,7 +642,7 @@ struct WebView: UIViewRepresentable {
                             self?.executeJavaScript(script, in: iframeInfo, webView: webView)
                         }
                     case .failure(let error):
-                        print("⚠️ HTTP GET request failed: \(error.localizedDescription)")
+                        print("HTTP GET request failed: \(error.localizedDescription)")
                     }
                 }
 
@@ -694,7 +667,7 @@ struct WebView: UIViewRepresentable {
                             self?.executeJavaScript(script, in: iframeInfo, webView: webView)
                         }
                     case .failure(let error):
-                        print("⚠️ HTTP POST request failed: \(error.localizedDescription)")
+                        print("HTTP POST request failed: \(error.localizedDescription)")
                     }
                 }
 
@@ -725,7 +698,7 @@ struct WebView: UIViewRepresentable {
                 let fileName = params["fileName"] as? String ?? "default_cache"
                 
                 guard let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-                    print("⚠️ Cannot access cache directory")
+                    print("Cannot access cache directory")
                     return
                 }
                 
@@ -740,7 +713,7 @@ struct WebView: UIViewRepresentable {
                     let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','success'); }"
                     executeJavaScript(script, in: iframeInfo, webView: webView)
                 } catch {
-                    print("⚠️ Failed to save cache: \(error.localizedDescription)")
+                    print("Failed to save cache: \(error.localizedDescription)")
                 }
 
             case "saveData":
@@ -748,7 +721,7 @@ struct WebView: UIViewRepresentable {
                 let fileName = params["fileName"] as? String ?? "default_data"
                 
                 guard let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-                    print("⚠️ Cannot access documents directory")
+                    print("Cannot access documents directory")
                     return
                 }
                 
@@ -759,47 +732,47 @@ struct WebView: UIViewRepresentable {
                 do {
                     try FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true, attributes: nil)
                     try content.write(to: fileURL, atomically: true, encoding: .utf8)
-                    print("✅ Saved to documents: \(fileURL.path)")
+                    print("Saved to documents: \(fileURL.path)")
                     let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','success'); }"
                     executeJavaScript(script, in: iframeInfo, webView: webView)
                 } catch {
-                    print("⚠️ Failed to save data: \(error.localizedDescription)")
+                    print("Failed to save data: \(error.localizedDescription)")
                 }
 
             case "removeCache":
                 let fileName = params["fileName"] as? String ?? "default_cache"
                 
                 guard let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-                    print("⚠️ Cannot access cache directory")
+                    print("Cannot access cache directory")
                     return
                 }
                 
                 let fileURL = cacheDir.appendingPathComponent(fileName)
                 do {
                     try FileManager.default.removeItem(at: fileURL)
-                    print("✅ Removed from cache: \(fileURL.path)")
+                    print("Removed from cache: \(fileURL.path)")
                     let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','success'); }"
                     executeJavaScript(script, in: iframeInfo, webView: webView)
                 } catch {
-                    print("⚠️ Failed to remove cache: \(error.localizedDescription)")
+                    print("Failed to remove cache: \(error.localizedDescription)")
                 }
 
             case "removeData":
                 let fileName = params["fileName"] as? String ?? "default_data"
                 
                 guard let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-                    print("⚠️ Cannot access documents directory")
+                    print("Cannot access documents directory")
                     return
                 }
                 
                 let fileURL = documentsDir.appendingPathComponent(fileName)
                 do {
                     try FileManager.default.removeItem(at: fileURL)
-                    print("✅ Removed from documents: \(fileURL.path)")
+                    print("Removed from documents: \(fileURL.path)")
                     let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','success'); }"
                     executeJavaScript(script, in: iframeInfo, webView: webView)
                 } catch {
-                    print("⚠️ Failed to remove data: \(error.localizedDescription)")
+                    print("Failed to remove data: \(error.localizedDescription)")
                 }
 
             case "registerIframeUrl":
@@ -814,9 +787,6 @@ struct WebView: UIViewRepresentable {
                 // Add the new entry
                 WebView.codeInjecter.append(["url": url, "code": code])
                 
-                // Also update ScriptInjecter singleton (it will replace if exists)
-                ScriptInjecter.shared.addScript(url: url, script: code)
-                
                 print("Registered iframe URL pattern: \(url)")
                 
                 // Rebuild user scripts with updated injector
@@ -826,22 +796,6 @@ struct WebView: UIViewRepresentable {
                 
                 let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','success'); }"
                 executeJavaScript(script, in: iframeInfo, webView: webView)
-            
-            case "getCodeInjecters":
-                // Return the list of code injecters as JSON to the requesting frame
-                let jsonData = try? JSONSerialization.data(withJSONObject: WebView.codeInjecter)
-                if let jsonString = jsonData.flatMap({ String(data: $0, encoding: .utf8) }) {
-                    let escapedJSON = jsonString
-                        .replacingOccurrences(of: "\\", with: "\\\\")
-                        .replacingOccurrences(of: "'", with: "\\'")
-                        .replacingOccurrences(of: "\n", with: "\\n")
-                        .replacingOccurrences(of: "\r", with: "\\r")
-                    let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','\(escapedJSON)'); }"
-                    executeJavaScript(script, in: iframeInfo, webView: webView)
-                } else {
-                    let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','[]'); }"
-                    executeJavaScript(script, in: iframeInfo, webView: webView)
-                }
             
             case "getWindowInsets":
                 // Get safe area insets (status bar, notch/Dynamic Island, home indicator, etc.)
@@ -868,32 +822,6 @@ struct WebView: UIViewRepresentable {
                 let scale = UIScreen.main.scale     
                 let insetsJSON = "{\"left\": \(insets.left * scale), \"top\": \(insets.top * scale), \"right\": \(insets.right * scale), \"bottom\": \(insets.bottom * scale)}"
                 let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','\(insetsJSON)'); }"
-                executeJavaScript(script, in: iframeInfo, webView: webView)
-            
-            case "clearCodeInjecters":
-                WebView.codeInjecter.removeAll()
-                
-                // Also clear ScriptInjecter singleton
-                ScriptInjecter.shared.clearAllScripts()
-                
-                // Rebuild user scripts (now empty)
-                if let webView = self.webView {
-                    self.parent.rebuildUserScripts(webView: webView)
-                }
-                
-                print("✅ Cleared all code injecters and user scripts")
-                let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','success'); }"
-                executeJavaScript(script, in: iframeInfo, webView: webView)
-
-            case "interceptRequest":
-                let url = params["url"] as? String ?? ""
-                let intercept = params["includes"] as? Bool ?? false
-                
-                // Add to the interceptRequests array
-                WebView.interceptRequests.append(["url": url, "includes": intercept])
-                print("✅ Registered request interception for URL pattern: \(url), intercept: \(intercept)")
-                
-                let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','success'); }"
                 executeJavaScript(script, in: iframeInfo, webView: webView)
 
             case "haveCookie":
@@ -939,20 +867,14 @@ struct WebView: UIViewRepresentable {
                         }
                     }
                     
-                    print("✅ Registered \(responseDictArray.count) override response rule(s)")
+                    print("Registered \(responseDictArray.count) override response rule(s)")
                     let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','\(responseDictArray.count)'); }"
                     executeJavaScript(script, in: iframeInfo, webView: webView)
                 } else {
-                    print("⚠️ No override responses to register")
+                    print("No override responses to register")
                     let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','0'); }"
                     executeJavaScript(script, in: iframeInfo, webView: webView)
                 }
-
-            case "clearOverrideResponses":
-                HTTPResponseModifierProtocol.overrideResponses.removeAll()
-                print("🗑️ Cleared all override responses")
-                let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','cleared'); }"
-                executeJavaScript(script, in: iframeInfo, webView: webView)
                 
             case "removeClientToken":
                 let platform = params["platform"] as? String ?? "none"
@@ -974,11 +896,11 @@ struct WebView: UIViewRepresentable {
                 let sinceDate = Date(timeIntervalSince1970: 0)
                 
                 dataStore?.removeData(ofTypes: dataTypes, modifiedSince: sinceDate, completionHandler: {
-                    print("✅ Cleared WKWebView cache and website data")
+                    print("Cleared WKWebView cache and website data")
                 })
 
                 URLCache.shared.removeAllCachedResponses()
-                print("✅ [Cache] Cleared URLSession cache")
+                print("[Cache] Cleared URLSession cache")
                 webView?.reload()
                 
             case "addBadUrl":
@@ -998,7 +920,7 @@ struct WebView: UIViewRepresentable {
                     // Get the root view controller
                     guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                           let rootViewController = windowScene.windows.first?.rootViewController else {
-                        print("⚠️ Cannot get root view controller")
+                        print("Cannot get root view controller")
                         let script = "if(window.listeners && window.listeners.filePickerCallback) { window.listeners.filePickerCallback([]); }"
                         self.executeJavaScript(script, in: iframeInfo, webView: webView)
                         return
@@ -1020,14 +942,14 @@ struct WebView: UIViewRepresentable {
                         UIApplication.shared.open(url, options: [:], completionHandler: nil)
                     }
                 } else {
-                    print("⚠️ Cannot open URL: \(urlString)")
+                    print("Cannot open URL: \(urlString)")
                 }
                 
             case "restartApp":
                 webView?.reloadFromOrigin()
 
             default:
-                print("⚠️ Unknown method: \(method)")
+                print("Unknown method: \(method)")
             }
         }
         
@@ -1040,11 +962,11 @@ struct WebView: UIViewRepresentable {
                 return
             }
             
-            print("📁 User selected file: \(selectedURL.lastPathComponent)")
+            print("User selected file: \(selectedURL.lastPathComponent)")
             
             // Start accessing the security-scoped resource
             guard selectedURL.startAccessingSecurityScopedResource() else {
-                print("⚠️ Cannot access security-scoped resource")
+                print("Cannot access security-scoped resource")
                 callFilePickerCallback(with: [])
                 return
             }
@@ -1055,7 +977,7 @@ struct WebView: UIViewRepresentable {
             
             // Get documents directory
             guard let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-                print("⚠️ Cannot access documents directory")
+                print("Cannot access documents directory")
                 callFilePickerCallback(with: [])
                 return
             }
@@ -1085,7 +1007,7 @@ struct WebView: UIViewRepresentable {
             // Copy the file to documents directory
             do {
                 try FileManager.default.copyItem(at: selectedURL, to: finalDestinationURL)
-                print("✅ File copied to: \(finalDestinationURL.path)")
+                print("File copied to: \(finalDestinationURL.path)")
                 
                 // Get the relative path from documents directory and URL-encode it
                 let fileName = finalDestinationURL.lastPathComponent
@@ -1093,7 +1015,7 @@ struct WebView: UIViewRepresentable {
                 
                 // URL-encode the filename for the app://localfiles URL
                 guard let encodedFileName = fileName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {
-                    print("❌ Failed to encode filename: \(fileName)")
+                    print("Failed to encode filename: \(fileName)")
                     callFilePickerCallback(with: [])
                     return
                 }
@@ -1106,13 +1028,12 @@ struct WebView: UIViewRepresentable {
                 callFilePickerCallback(with: [[appURL, displayName]])
                 
             } catch {
-                print("❌ Error copying file: \(error.localizedDescription)")
+                print("Error copying file: \(error.localizedDescription)")
                 callFilePickerCallback(with: [])
             }
         }
         
         func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-            print("📱 User cancelled document picker")
             callFilePickerCallback(with: [])
         }
         

@@ -63,7 +63,7 @@ class HTTPResponseModifierProtocol: URLProtocol {
                 }
                 let isMatch = includes ? urlString.contains(pattern) : urlString == pattern
                 if isMatch {
-                    print("🚫 [Protocol] Blocking request to URL: \(urlString)")
+                    print("[Protocol] Blocking request to URL: \(urlString)")
                     let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled, userInfo: nil)
                     client?.urlProtocol(self, didFailWithError: error)
                     return
@@ -93,9 +93,9 @@ class HTTPResponseModifierProtocol: URLProtocol {
                     // Format all cookies into a single Cookie header: "name1=value1; name2=value2"
                     let cookieHeader = cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
                     mutableRequest.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
-                    print("🍪 [Protocol] Added Cookie header with \(cookies.count) cookie(s): \(cookieHeader)")
+                    print("[Protocol] Added Cookie header with \(cookies.count) cookie(s): \(cookieHeader)")
                 } else {
-                    print("⚠️ [Protocol] No cookies found for URL: \(url.absoluteString)")
+                    print("[Protocol] No cookies found for URL: \(url.absoluteString)")
                 }
             }
         }
@@ -149,7 +149,7 @@ class HTTPResponseModifierProtocol: URLProtocol {
                    let clientId = queryItems.first(where: { $0.name == "client_id" })?.value {
                     
                     WebView.clientTokens["Soundcloud"] = clientId
-                    print("🎵 [Soundcloud] Extracted client_id: \(clientId)")
+                    print("[Soundcloud] Extracted client_id: \(clientId)")
                 }
             }
             
@@ -327,7 +327,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
             // Store and sync each cookie
             for cookie in allCookies {
                 // Debug: Log cookie attributes
-                // print("🍪 [Cookie Set] \(cookie.name) = \(cookie.value)")
+                // print("[Cookie Set] \(cookie.name) = \(cookie.value)")
                 
                 HTTPCookieStorage.shared.setCookie(cookie)
                 
@@ -381,7 +381,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
-            print("❌ [Protocol] Request failed: \(error.localizedDescription)")
+            print("[Protocol] Request failed: \(error.localizedDescription)")
             print("   URL: \(task.originalRequest?.url?.absoluteString ?? "unknown")")
             print("   Error code: \((error as NSError).code)")
             print("   Error domain: \((error as NSError).domain)")
@@ -408,7 +408,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
                 ) {
                     // Apply overrides to response data
                     if var responseString = String(data: receivedData, encoding: .utf8) {
-                        print("🔄 [Override] Applying \(overrides.count) override(s) to response from: \(url)")
+                        print("[Override] Applying \(overrides.count) override(s) to response from: \(url)")
                         
                         for override in overrides {
                             if let search = override["search"], let replace = override["replace"] {
@@ -419,7 +419,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
                         // Send modified data
                         if let modifiedData = responseString.data(using: .utf8) {
                             client?.urlProtocol(self, didLoad: modifiedData)
-                            print("✅ [Override] Applied overrides, sent \(modifiedData.count) bytes")
+                            print("[Override] Applied overrides, sent \(modifiedData.count) bytes")
                         } else {
                             // Fallback to original data if encoding fails
                             client?.urlProtocol(self, didLoad: receivedData)
@@ -459,7 +459,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
         }
         
         // Create mutable redirect request
-        guard var mutableRedirect = (request as NSURLRequest).mutableCopy() as? NSMutableURLRequest else {
+        guard let mutableRedirect = (request as NSURLRequest).mutableCopy() as? NSMutableURLRequest else {
             completionHandler(nil)
             return
         }
@@ -531,7 +531,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
     // Task-level SSL challenge handler (called first, before session-level)
     func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         
-        print("🔐 [Protocol] Received task-level challenge for: \(challenge.protectionSpace.host)")
+        print("[Protocol] Received task-level challenge for: \(challenge.protectionSpace.host)")
         print("   Auth method: \(challenge.protectionSpace.authenticationMethod)")
         
         if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
@@ -539,7 +539,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
                 #if DEBUG
                 // Accept ALL certificates for local development (including self-signed)
                 let credential = URLCredential(trust: serverTrust)
-                print("🔓 [Protocol SSL Bypass - Task] ✅ Accepting self-signed cert for: \(challenge.protectionSpace.host)")
+                print("[Protocol SSL Bypass - Task] Accepting self-signed cert for: \(challenge.protectionSpace.host)")
                 completionHandler(.useCredential, credential)
                 return
                 #else
