@@ -200,6 +200,12 @@ struct WebView: UIViewRepresentable {
             }
         }
         
+        // Restore session cookies from Keychain
+        let sessionCookies = CookieFileStore.load()
+        for cookie in sessionCookies {
+            configuration.websiteDataStore.httpCookieStore.setCookie(cookie)
+        }
+        
         // Enable inspection (Safari Web Inspector)
         if #available(iOS 16.4, *) {
             webView.isInspectable = true
