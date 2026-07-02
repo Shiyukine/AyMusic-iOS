@@ -32,6 +32,11 @@ struct ContentView: View {
                 .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CloseSecondWebView"))) { _ in
                     showSecondWebView = false
                 }
+                .onAppear() {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                        AudioManager.shared.startSilentLoop()
+                    }
+                }
         }
     }
 }

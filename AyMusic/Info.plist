@@ -31,12 +31,9 @@
 	</dict>
 	<key>UIBackgroundModes</key>
 	<array>
-		<string>fetch</string>
-		<string>processing</string>
 		<string>audio</string>
 		<string>remote-notification</string>
 		<string>bluetooth-central</string>
-		<string>bluetooth-peripheral</string>
 	</array>
 </dict>
 </plist>
