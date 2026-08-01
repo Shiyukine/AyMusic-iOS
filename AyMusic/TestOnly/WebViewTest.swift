@@ -25,7 +25,7 @@ struct WebViewTest: UIViewRepresentable {
 
         // PRIVATE API: Register http/https schemes with NSURLProtocol
         // This allows us to intercept and modify response headers like Android
-        registerPrivateAPIForHTTPInterception()
+        //registerPrivateAPIForHTTPInterception()
         
         // Modern way to enable JavaScript (iOS 14+)
         let preferences = WKWebpagePreferences()
@@ -59,7 +59,7 @@ struct WebViewTest: UIViewRepresentable {
             configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         }
         
-        // Setup JavaScript bridge - inject boundobject
+        /*// Setup JavaScript bridge - inject boundobject
         let userContentController = WKUserContentController()
         userContentController.add(context.coordinator as! WKScriptMessageHandler, name: "boundobject")
         configuration.userContentController = userContentController
@@ -106,7 +106,7 @@ struct WebViewTest: UIViewRepresentable {
             // Add iframe script injection loader
             let injectorScript = WKUserScript(source: overridesScript, injectionTime: .atDocumentStart, forMainFrameOnly: false)
             userContentController.addUserScript(injectorScript)
-        }
+        }*/
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -167,10 +167,18 @@ struct WebViewTest: UIViewRepresentable {
         // Set custom user agent
         webView.customUserAgent = newUA
         
+        // Restore session cookies from Keychain
+        let sessionCookies = CookieFileStore.load()
+        for cookie in sessionCookies {
+            configuration.websiteDataStore.httpCookieStore.setCookie(cookie)
+        }
+        
         // Enable inspection (Safari Web Inspector)
         if #available(iOS 16.4, *) {
             webView.isInspectable = true
         }
+        
+        AudioManager.shared.startSilentLoop()
         
         return webView
     }
@@ -317,7 +325,7 @@ struct WebViewTest: UIViewRepresentable {
         
         // MARK: - JavaScript Bridge Handler
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard let body = message.body as? [String: Any] else { return }
+            /*guard let body = message.body as? [String: Any] else { return }
             
             // print("📨 Received message from JS: \(message.name)")
             // print("   Body: \(body)")
@@ -328,10 +336,10 @@ struct WebViewTest: UIViewRepresentable {
                 handleBoundObjectCall(body: body, webView: message.webView, iframeInfo: message.frameInfo)
             default:
                 print("Unknown message name: \(message.name)")
-            }
+            }*/
         }
 
-        private func handleBoundObjectCall(body: [String: Any], webView: WKWebView?, iframeInfo: WKFrameInfo? = nil) {
+        /*private func handleBoundObjectCall(body: [String: Any], webView: WKWebView?, iframeInfo: WKFrameInfo? = nil) {
             guard let method = body["method"] as? String else {
                 print("No method specified")
                 return
@@ -359,7 +367,7 @@ struct WebViewTest: UIViewRepresentable {
             default:
                 print("Unknown method: \(method)")
             }
-        }
+        }*/
     }
 }
 

@@ -11,7 +11,7 @@ struct ContentViewTest: View {
     
     var body: some View {
         NavigationStack {
-            WebViewTest.showWebView(baseUrl: "https://soundcloud.com/signin")
+            WebViewTest.showWebView(baseUrl: "https://www.youtube.com/watch?v=J66gqneY518")
                 .edgesIgnoringSafeArea(.all)
         }
     }
