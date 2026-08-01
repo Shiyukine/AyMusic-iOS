@@ -62,7 +62,10 @@ struct CookieFileStore {
     // MARK: - Load
 
     static func load() -> [HTTPCookie] {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else { return [] }
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            print("[CookieFileStore] Load failed: no storage file")
+            return []
+        }
 
         do {
             let data = try Data(contentsOf: fileURL)
