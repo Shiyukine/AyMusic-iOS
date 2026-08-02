@@ -71,15 +71,22 @@ window.boundobject = {
             }, callId);
         });
     },
-    httpRequestPOST: (url, body, options) => {
+    httpRequestPOST: (url, json, contentType = null, headers = null) => {
         return new Promise((resolve) => {
             let callId = window.boundobject.__manager.addCallback((data) => {
                 resolve(data);
             });
+            let newHeaders = {};
+            for (let obj of headers ? JSON.parse(headers) : []) {
+                let name = obj.name;
+                let value = obj.value;
+                newHeaders[name] = value;
+            }
+            newHeaders['Content-Type'] = contentType ? contentType : 'application/json';
             window.boundobject.__manager.callNative('httpRequestPOST', {
                 url: url,
-                body: body,
-                headers: options && options.headers ? options.headers : {}
+                body: typeof json === "string" ? json : JSON.stringify(json),
+                headers: newHeaders
             }, callId);
         });
     },
