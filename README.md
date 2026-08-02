@@ -1,5 +1,5 @@
 # AyMusic-iOS
-AyMusic allows you to create playlists with music on **Spotify, Youtube, Deezer, Soundcloud, Bandcamp and locally from your computer**. You can use this application if you want to create a playlist of music on Spotify but there's some music that you can't find on Spotify but on another platform.
+AyMusic allows you to create playlists with music on **Spotify, Youtube, Deezer, Soundcloud, Bandcamp and locally from your computer or mobile**. You can use this application if you want to create a playlist of music on Spotify but there's some music that you can't find on Spotify but on another platform.
 
 With AyMusic you can do this without any problems. Create a playlist, add your music to one platform and then add it to other platforms and AyMusic will play your favourite music!
 
