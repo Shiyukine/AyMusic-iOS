@@ -96,6 +96,7 @@ window.boundobject = {
         });
     },
     saveCache: (fileName, content) => {
+        content = Array.from(content);
         window.boundobject.__manager.callNative('saveCache', {
             fileName: fileName,
             content: content
@@ -112,6 +113,7 @@ window.boundobject = {
         });
     },
     saveData: (fileName, content) => {
+        content = Array.from(content);
         window.boundobject.__manager.callNative('saveData', {
             fileName: fileName,
             content: content

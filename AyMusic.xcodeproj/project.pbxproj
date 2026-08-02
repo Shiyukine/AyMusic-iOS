@@ -419,6 +419,13 @@
 				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = G4KZG4257R;
 				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_SOURCE_FILE_NAMES[arch=*]" = (
+					"docs/*",
+					readme.md,
+					"node_modules/*",
+					.gitignore,
+					"package*.json",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AyMusic/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = AyMusic;
@@ -455,6 +462,13 @@
 				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = G4KZG4257R;
 				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_SOURCE_FILE_NAMES[arch=*]" = (
+					"docs/*",
+					"node_modules/*",
+					.gitignore,
+					readme.md,
+					"package*.json",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AyMusic/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = AyMusic;

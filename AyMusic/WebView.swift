@@ -543,7 +543,7 @@ struct WebView: UIViewRepresentable {
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             guard let body = message.body as? [String: Any] else { return }
             
-            // print("📨 Received message from JS: \(message.name)")
+            // print(" Received message from JS: \(message.name)")
             // print("   Body: \(body)")
             
             // Handle different message types
@@ -705,7 +705,7 @@ struct WebView: UIViewRepresentable {
                 executeJavaScript(script, in: iframeInfo, webView: webView)
 
             case "saveCache":
-                let content = params["content"] as? String ?? ""
+                let content = params["content"] as? [UInt8] ?? []
                 let fileName = params["fileName"] as? String ?? "default_cache"
                 
                 guard let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
@@ -719,7 +719,8 @@ struct WebView: UIViewRepresentable {
                 let parentDir = fileURL.deletingLastPathComponent()
                 do {
                     try FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true, attributes: nil)
-                    try content.write(to: fileURL, atomically: true, encoding: .utf8)
+                    let data = Data(content)
+                    try data.write(to: fileURL)
                     // print("Saved to cache: \(fileURL.path)")
                     let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','success'); }"
                     executeJavaScript(script, in: iframeInfo, webView: webView)
@@ -728,7 +729,7 @@ struct WebView: UIViewRepresentable {
                 }
 
             case "saveData":
-                let content = params["content"] as? String ?? ""
+                let content = params["content"] as? [UInt8] ?? []
                 let fileName = params["fileName"] as? String ?? "default_data"
                 
                 guard let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
@@ -742,8 +743,9 @@ struct WebView: UIViewRepresentable {
                 let parentDir = fileURL.deletingLastPathComponent()
                 do {
                     try FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true, attributes: nil)
-                    try content.write(to: fileURL, atomically: true, encoding: .utf8)
-                    print("Saved to documents: \(fileURL.path)")
+                    let data = Data(content)
+                    try data.write(to: fileURL)
+                    // print("Saved to documents: \(fileURL.path)")
                     let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)','success'); }"
                     executeJavaScript(script, in: iframeInfo, webView: webView)
                 } catch {
@@ -876,7 +878,6 @@ struct WebView: UIViewRepresentable {
 
             case "registerOverrideResponse":
                 let response = params["response"] as? String ?? ""
-                print(response)
                 var responseDictArray: [[String: Any]] = []
                 if let jsonData = response.data(using: .utf8),
                    let parsed = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {

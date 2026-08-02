@@ -287,7 +287,7 @@ struct ExtWebView: UIViewRepresentable {
             if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
                 if let serverTrust = challenge.protectionSpace.serverTrust {
                     let credential = URLCredential(trust: serverTrust)
-                    print("🔓 [SSL Bypass] Accepting self-signed cert for: \(challenge.protectionSpace.host)")
+                    print("[SSL Bypass] Accepting self-signed cert for: \(challenge.protectionSpace.host)")
                     completionHandler(.useCredential, credential)
                     return
                 }
