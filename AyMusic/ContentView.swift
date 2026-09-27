@@ -33,9 +33,7 @@ struct ContentView: View {
                     showSecondWebView = false
                 }
                 .onAppear() {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                        AudioManager.shared.startSilentLoop()
-                    }
+                    AudioManager.shared.startSilentLoop()
                 }
         }
     }

@@ -7,6 +7,7 @@
 
 import AVFoundation
 import MediaPlayer
+import WebKit
 
 class AudioManager {
     static let shared = AudioManager()
@@ -14,12 +15,14 @@ class AudioManager {
     // 1. Swap AVAudioPlayer for the modern AVQueuePlayer and AVPlayerLooper
     private var queuePlayer: AVQueuePlayer?
     private var playerLooper: AVPlayerLooper?
+    private var nowPlayingInfo = [String: Any]()
+    private var webView: WKWebView?
     
     private init() {}
 
     func startSilentLoop() {
         configureAudioSession()
-        /*setupRemoteTransportControls()
+        setupRemoteTransportControls()
         
         guard let silentFileURL = createSilentWavFile() else { return }
         
@@ -43,13 +46,17 @@ class AudioManager {
             print("Modern AVQueuePlayer loop started safely!")
         } else {
             print("Could not instantiate AVQueuePlayer.")
-        }*/
+        }
+    }
+
+    func setWebView(_ webView: WKWebView) {
+        self.webView = webView
     }
     
     private func configureAudioSession() {
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try session.setCategory(.playback, mode: .default, options: [])
             try session.setActive(true)
         } catch {
             print("Failed to set audio session: \(error)")
@@ -57,9 +64,8 @@ class AudioManager {
     }
     
     private func updateNowPlayingInfo() {
-        var nowPlayingInfo = [String: Any]()
-        nowPlayingInfo[MPMediaItemPropertyTitle] = "System Active"
-        nowPlayingInfo[MPMediaItemPropertyArtist] = "My App"
+        nowPlayingInfo[MPMediaItemPropertyTitle] = "Click to launch"
+        nowPlayingInfo[MPMediaItemPropertyArtist] = "AyMusic"
         
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = 86400.0
@@ -70,8 +76,35 @@ class AudioManager {
     
     private func setupRemoteTransportControls() {
         let commandCenter = MPRemoteCommandCenter.shared()
-        commandCenter.playCommand.addTarget { _ in return .success }
-        commandCenter.pauseCommand.addTarget { _ in return .success }
+        commandCenter.playCommand.isEnabled = true
+        commandCenter.playCommand.addTarget { _ in
+            self.webView?.evaluateJavaScript("window.listeners.player.play()", completionHandler: nil)
+            return .success 
+        }
+        commandCenter.pauseCommand.isEnabled = true
+        commandCenter.pauseCommand.addTarget { _ in
+            self.webView?.evaluateJavaScript("window.listeners.player.pause()", completionHandler: nil)
+            return .success
+        }
+        commandCenter.nextTrackCommand.isEnabled = true
+        commandCenter.nextTrackCommand.addTarget { _ in
+            self.webView?.evaluateJavaScript("window.listeners.player.next()", completionHandler: nil)
+            return .success
+        }
+        commandCenter.previousTrackCommand.isEnabled = true
+        commandCenter.previousTrackCommand.addTarget { _ in
+            self.webView?.evaluateJavaScript("window.listeners.player.previous()", completionHandler: nil)
+            return .success
+        }
+        commandCenter.changePlaybackPositionCommand.isEnabled = true
+        commandCenter.changePlaybackPositionCommand.addTarget { event in
+            if let positionEvent = event as? MPChangePlaybackPositionCommandEvent {
+                let newTime = positionEvent.positionTime
+                self.webView?.evaluateJavaScript("window.listeners.player.seek(\(newTime))", completionHandler: nil)
+                return .success
+            }
+            return .commandFailed
+        }
     }
     
     private func createSilentWavFile() -> URL? {
@@ -101,6 +134,38 @@ class AudioManager {
         } catch {
             print("Failed to generate micro-noise file: \(error)")
             return nil
+        }
+    }
+
+    func sessionChangeMediaMetadata(_ title: String, _ album: String, _ artist: String, _ artworkUrl: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            self.nowPlayingInfo[MPMediaItemPropertyTitle] = title
+            self.nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = album
+            self.nowPlayingInfo[MPMediaItemPropertyArtist] = artist
+            
+            if let url = URL(string: artworkUrl), let data = try? Data(contentsOf: url), let image = UIImage(data: data) {
+                let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+                self.nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+            }
+            
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = self.nowPlayingInfo
+        }
+    }
+
+    func sessionChangePositionState(_ currentTime: Double, _ duration: Double, _ playbackRate: Double, _ isPlaying: Bool, _ shuffle: Bool, _ repeatMode: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            self.nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
+            self.nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
+            self.nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = playbackRate
+            
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = self.nowPlayingInfo
+            MPNowPlayingInfoCenter.default().playbackState = isPlaying ? .playing : .paused
+        }
+    }
+
+    func sessionChangePlaying(_ isPlaying: Bool) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            MPNowPlayingInfoCenter.default().playbackState = isPlaying ? .playing : .paused
         }
     }
 }

@@ -210,6 +210,8 @@ struct WebView: UIViewRepresentable {
         if #available(iOS 16.4, *) {
             webView.isInspectable = true
         }
+
+        AudioManager.shared.setWebView(webView)
         
         return webView
     }
