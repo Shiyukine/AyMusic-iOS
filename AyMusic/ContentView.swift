@@ -48,16 +48,29 @@ struct SecondWebView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             ExtWebView.showWebView(baseUrl: baseUrl, closeUrl: closeUrl, filterByInclude: filterByInclude)
-                .edgesIgnoringSafeArea(.all)
             
             // Close button
-            Button(action: onClose) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 30))
-                    .foregroundColor(.white)
-                    .background(Color.black.opacity(0.3))
-                    .clipShape(Circle())
-                    .padding()
+            // if ios >= 26
+            if #available(iOS 26.0, *) {
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 30))
+                        .padding(10)
+                        .foregroundColor(.white)
+                        .glassEffect()
+                        .clipShape(Circle())
+                        .padding()
+                }
+            } else {
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 30))
+                        .padding(10)
+                        .foregroundColor(.white)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                        .padding()
+                }
             }
         }
         .navigationBarBackButtonHidden(true)

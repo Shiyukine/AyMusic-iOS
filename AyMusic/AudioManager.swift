@@ -9,6 +9,12 @@ import AVFoundation
 import MediaPlayer
 import WebKit
 
+extension AVPlayer {
+    var isPlaying: Bool {
+        return rate != 0 && error == nil
+    }
+}
+
 class AudioManager {
     static let shared = AudioManager()
     
@@ -18,11 +24,13 @@ class AudioManager {
     private var nowPlayingInfo = [String: Any]()
     private var webView: WKWebView?
     
+    private var bgTask: UIBackgroundTaskIdentifier = .invalid
+    
     private init() {}
 
     func startSilentLoop() {
         configureAudioSession()
-        setupRemoteTransportControls()
+        //setupRemoteTransportControls()
         
         guard let silentFileURL = createSilentWavFile() else { return }
         
@@ -36,7 +44,7 @@ class AudioManager {
             // 4. Use AVPlayerLooper to seamlessly loop it at the system level
             playerLooper = AVPlayerLooper(player: player, templateItem: playerItem)
             
-            player.volume = 1.0 // Keep at 1.0 since the file is microscopic noise
+            player.volume = 1.0
             
             UIApplication.shared.beginReceivingRemoteControlEvents()
             
@@ -64,8 +72,21 @@ class AudioManager {
     }
     
     private func updateNowPlayingInfo() {
-        nowPlayingInfo[MPMediaItemPropertyTitle] = "Click to launch"
+        nowPlayingInfo[MPMediaItemPropertyTitle] = "Click to launch the app"
+        nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = "Required to listen to a music"
         nowPlayingInfo[MPMediaItemPropertyArtist] = "AyMusic"
+        nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: CGSize(width: 100, height: 100)) { _ in
+            // 1. Traverse the Info.plist dictionary to find the primary icon name
+            guard let iconsDict = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
+                  let primaryIconsDict = iconsDict["CFBundlePrimaryIcon"] as? [String: Any],
+                  let iconFiles = primaryIconsDict["CFBundleIconFiles"] as? [String],
+                  let lastIconName = iconFiles.last else {
+                return UIImage()
+            }
+            
+            // 2. Load the image asset via its catalog name
+            return UIImage(named: lastIconName) ?? UIImage()
+        }
         
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = 86400.0
@@ -78,12 +99,44 @@ class AudioManager {
         let commandCenter = MPRemoteCommandCenter.shared()
         commandCenter.playCommand.isEnabled = true
         commandCenter.playCommand.addTarget { _ in
-            self.webView?.evaluateJavaScript("window.listeners.player.play()", completionHandler: nil)
-            return .success 
+            let session = AVAudioSession.sharedInstance()
+            try? session.setActive(true)
+            if self.queuePlayer?.isPlaying == false {
+                self.queuePlayer?.play()
+            }
+            self.bgTask = UIApplication.shared.beginBackgroundTask(withName: "MediaActionWebView") {
+                // Called if we run out of time — must end the task
+                UIApplication.shared.endBackgroundTask(self.bgTask)
+                self.bgTask = .invalid
+            }
+            self.webView?.evaluateJavaScript("window.listeners.player.play(); window.testAudio.play()") { _, _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    UIApplication.shared.endBackgroundTask(self.bgTask)
+                }
+                
+                self.bgTask = .invalid
+            }
+            return .success
         }
         commandCenter.pauseCommand.isEnabled = true
         commandCenter.pauseCommand.addTarget { _ in
-            self.webView?.evaluateJavaScript("window.listeners.player.pause()", completionHandler: nil)
+            let session = AVAudioSession.sharedInstance()
+            try? session.setActive(true)
+            if self.queuePlayer?.isPlaying == false {
+                self.queuePlayer?.play()
+            }
+            self.bgTask = UIApplication.shared.beginBackgroundTask(withName: "MediaActionWebView") {
+                // Called if we run out of time — must end the task
+                UIApplication.shared.endBackgroundTask(self.bgTask)
+                self.bgTask = .invalid
+            }
+            self.webView?.evaluateJavaScript("window.listeners.player.play(); window.testAudio.play()") { _, _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    UIApplication.shared.endBackgroundTask(self.bgTask)
+                }
+                
+                self.bgTask = .invalid
+            }
             return .success
         }
         commandCenter.nextTrackCommand.isEnabled = true
