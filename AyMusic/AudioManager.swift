@@ -89,7 +89,7 @@ class AudioManager {
         }
         
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
-        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = 86400.0
+        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = 1.0
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = 0.0
         
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
