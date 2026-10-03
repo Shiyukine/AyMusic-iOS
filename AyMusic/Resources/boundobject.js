@@ -219,5 +219,11 @@ window.boundobject = {
     },
     restartApp: () => {
         window.boundobject.__manager.callNative('restartApp', {});
+    },
+    onUpdateStateChange: (callback) => {
+        console.error("onUpdateStateChange is not implemented yet");
+    },
+    searchUpdates: () => {
+        console.error("searchUpdates is not implemented yet");
     }
 };

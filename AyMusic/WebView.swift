@@ -432,12 +432,11 @@ struct WebView: UIViewRepresentable {
             }
             
             let script = """
-            var intev = setInterval(() => {
+            var intev = setInterval(async () => {
                 if(!loaded) {
                     console.log('Attempt registerClient')
                     if(typeof app != 'undefined' && app) {
-                        app.registerClient('iOS', 'v\(versionName)', \(versionCode), window.boundobject, \(isPackaged))
-                        clearInterval(intev)
+                        if(await app.registerClient('iOS', 'v\(versionName)', \(versionCode), window.boundobject, \(isPackaged))) clearInterval(intev)
                     }
                 }
                 else {
