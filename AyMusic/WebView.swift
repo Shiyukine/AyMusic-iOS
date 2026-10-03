@@ -414,6 +414,7 @@ struct WebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            webView.navigationDelegate = self
             // Get version info from app bundle
             let versionName = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1"
             let versionCode = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
@@ -451,6 +452,23 @@ struct WebView: UIViewRepresentable {
         // MARK: - Request Interception (Native Level)
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             HTTPResponseModifierProtocol.bodyDataCache[navigationAction.request.url?.absoluteString ?? ""] = navigationAction.request.httpBody
+            
+            // Check if the navigation was initiated by a user tapping a link
+            if navigationAction.navigationType == .linkActivated {
+                if let url = navigationAction.request.url {
+                    let scheme = url.scheme?.lowercased()
+                    
+                    if scheme == "http" || scheme == "https" {
+                        // Manually load the URL inside this WKWebView
+                        webView.load(URLRequest(url: url))
+                        
+                        // Cancel the original navigation so iOS doesn't throw it out to an external app
+                        decisionHandler(.cancel)
+                        return
+                    }
+                }
+            }
+            
             decisionHandler(.allow)
         }
         

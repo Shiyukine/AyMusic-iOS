@@ -68,6 +68,11 @@ class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
             handleRootRequest(urlSchemeTask: urlSchemeTask, url: url, path: path)
             return
         }
+
+        if host == "cachenew" {
+            handleCacheRequest(urlSchemeTask: urlSchemeTask, url: url)
+            return
+        }
         
         // Determine which directory to use based on host
         let baseDir: URL?
@@ -121,6 +126,82 @@ class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
     
     func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {
         // Task cancelled
+    }
+
+    // MARK: - Cache Handler
+    private func handleCacheRequest(urlSchemeTask: WKURLSchemeTask, url: URL) {
+        // urls: app://cache/get?url=...&renew=true
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            urlSchemeTask.didFailWithError(NSError(domain: "AppSchemeHandler", code: -5, userInfo: [NSLocalizedDescriptionKey: "Invalid URL components"]))
+            return
+        }
+        let queryItems = components.queryItems ?? []
+        let urlItem = queryItems.first(where: { $0.name == "url" })
+        let renewItem = queryItems.first(where: { $0.name == "renew" })
+
+        guard let urlString = urlItem?.value, let targetURL = URL(string: urlString) else {
+            urlSchemeTask.didFailWithError(NSError(domain: "AppSchemeHandler", code: -6, userInfo: [NSLocalizedDescriptionKey: "Missing or invalid 'url' parameter"]))
+            return
+        }
+        let renew = renewItem?.value == "true"
+        
+        // Handle the cache request
+        let cacheDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        let cacheFileName = targetURL.lastPathComponent
+        let cacheFileURL = cacheDirectory.appendingPathComponent(cacheFileName)
+        if !renew && FileManager.default.fileExists(atPath: cacheFileURL.path) {
+            // Serve cached file
+            if let data = try? Data(contentsOf: cacheFileURL) {
+                let mimeType = getMimeType(for: cacheFileName)
+                let response = HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: [
+                        "Content-Type": mimeType,
+                        "Content-Length": "\(data.count)",
+                        "Cache-Control": "no-cache",
+                        "Access-Control-Allow-Origin": "*"
+                    ]
+                )!
+                urlSchemeTask.didReceive(response)
+                urlSchemeTask.didReceive(data)
+                urlSchemeTask.didFinish()
+                return
+            }
+        }
+        else {
+            // Download and cache the file
+            let task = URLSession.shared.dataTask(with: targetURL) { data, response, error in
+                if let error = error {
+                    urlSchemeTask.didFailWithError(error)
+                    return
+                }
+                guard let data = data else {
+                    urlSchemeTask.didFailWithError(NSError(domain: "AppSchemeHandler", code: -7, userInfo: [NSLocalizedDescriptionKey: "No data received"]))
+                    return
+                }
+                // Save to cache
+                try? data.write(to: cacheFileURL)
+                
+                let mimeType = self.getMimeType(for: cacheFileName)
+                let httpResponse = HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: [
+                        "Content-Type": mimeType,
+                        "Content-Length": "\(data.count)",
+                        "Cache-Control": "no-cache",
+                        "Access-Control-Allow-Origin": "*"
+                    ]
+                )!
+                urlSchemeTask.didReceive(httpResponse)
+                urlSchemeTask.didReceive(data)
+                urlSchemeTask.didFinish()
+            }
+            task.resume()
+        }
     }
     
     // MARK: - Root (Bundle Resources) Handler
