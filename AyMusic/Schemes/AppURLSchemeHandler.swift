@@ -7,6 +7,7 @@
 
 import SwiftUI
 import WebKit
+import CryptoKit
 
 class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
     let baseDirectory: String
@@ -147,7 +148,11 @@ class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
         
         // Handle the cache request
         let cacheDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-        let cacheFileName = targetURL.lastPathComponent
+
+        // get sha256 hash of the target URL to use as the cache file name
+        let urlData = targetURL.absoluteString.data(using: .utf8)!
+        let urlHash = SHA256.hash(data: urlData)
+        let cacheFileName = urlHash.hexStr
         let cacheFileURL = cacheDirectory.appendingPathComponent(cacheFileName)
         if !renew && FileManager.default.fileExists(atPath: cacheFileURL.path) {
             // Serve cached file
@@ -288,5 +293,15 @@ class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
         case "txt": return "text/plain"
         default: return "application/octet-stream"
         }
+    }
+}
+
+// CryptoKit.Digest utils
+extension Digest {
+    var bytes: [UInt8] { Array(makeIterator()) }
+    var data: Data { Data(bytes) }
+
+    var hexStr: String {
+        bytes.map { String(format: "%02X", $0) }.joined()
     }
 }
