@@ -154,26 +154,24 @@ class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
         let urlHash = SHA256.hash(data: urlData)
         let cacheFileName = urlHash.hexStr
         let cacheFileURL = cacheDirectory.appendingPathComponent(cacheFileName)
-        if !renew && FileManager.default.fileExists(atPath: cacheFileURL.path) {
-            // Serve cached file
-            if let data = try? Data(contentsOf: cacheFileURL) {
-                let mimeType = getMimeType(for: cacheFileName)
-                let response = HTTPURLResponse(
-                    url: url,
-                    statusCode: 200,
-                    httpVersion: "HTTP/1.1",
-                    headerFields: [
-                        "Content-Type": mimeType,
-                        "Content-Length": "\(data.count)",
-                        "Cache-Control": "no-cache",
-                        "Access-Control-Allow-Origin": "*"
-                    ]
-                )!
-                urlSchemeTask.didReceive(response)
-                urlSchemeTask.didReceive(data)
-                urlSchemeTask.didFinish()
-                return
-            }
+        if !renew && FileManager.default.fileExists(atPath: cacheFileURL.path),
+           let data = try? Data(contentsOf: cacheFileURL) {
+            let mimeType = getMimeType(for: cacheFileName)
+            let response = HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: [
+                    "Content-Type": mimeType,
+                    "Content-Length": "\(data.count)",
+                    "Cache-Control": "no-cache",
+                    "Access-Control-Allow-Origin": "*"
+                ]
+            )!
+            urlSchemeTask.didReceive(response)
+            urlSchemeTask.didReceive(data)
+            urlSchemeTask.didFinish()
+            return
         }
         else {
             // Download and cache the file
