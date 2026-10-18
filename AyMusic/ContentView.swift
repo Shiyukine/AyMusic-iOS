@@ -74,6 +74,33 @@ struct SecondWebView: View {
             }
         }
         .navigationBarBackButtonHidden(true)
+        .background(InteractivePopRecognizer())
+    }
+}
+
+// Background utility to re-enable the gesture controller
+struct InteractivePopRecognizer: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        DispatchQueue.main.async {
+            if let viewController = view.parentViewController,
+               let navigationController = viewController.navigationController {
+                navigationController.interactivePopGestureRecognizer?.delegate = context.coordinator
+            }
+        }
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            true
+        }
     }
 }
 

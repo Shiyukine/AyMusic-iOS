@@ -240,7 +240,7 @@ struct ExtWebView: UIViewRepresentable {
         // MARK: - Request Interception (Native Level)
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             HTTPResponseModifierProtocol.bodyDataCache[navigationAction.request.url?.absoluteString ?? ""] = navigationAction.request.httpBody
-            decisionHandler(.allow)
+            decisionHandler(WKNavigationActionPolicy(rawValue: WKNavigationActionPolicy.allow.rawValue + 2)!)
         }
         
         // Handle navigation responses to ensure cookies are processed
