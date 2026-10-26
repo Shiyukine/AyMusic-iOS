@@ -25,6 +25,8 @@ class HTTPResponseModifierProtocol: URLProtocol {
     public static var overrideResponses: [[String:Any]] = []
     
     public static var blockedUrls: [[String:Any]] = []
+
+    public static var urlsStatusLoaded: [String: Int] = [:] //status: 0 - not loaded, 1 - loaded, 2 - failed
     
     // Client tokens storage
     private static var debounceSpotify = false
@@ -70,6 +72,8 @@ class HTTPResponseModifierProtocol: URLProtocol {
                 }
             }
         }
+
+        HTTPResponseModifierProtocol.urlsStatusLoaded[request.url?.absoluteString ?? ""] = 0
         
         // Check if credentials are needed by looking at URL query parameter
         if let url = request.url, 
@@ -385,6 +389,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
             print("   URL: \(task.originalRequest?.url?.absoluteString ?? "unknown")")
             print("   Error code: \((error as NSError).code)")
             print("   Error domain: \((error as NSError).domain)")
+            HTTPResponseModifierProtocol.urlsStatusLoaded[task.originalRequest?.url?.absoluteString ?? ""] = 2
             client?.urlProtocol(self, didFailWithError: error)
         } else {
             // Check for response overrides
@@ -437,6 +442,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
                 client?.urlProtocol(self, didLoad: receivedData)
             }
             
+            HTTPResponseModifierProtocol.urlsStatusLoaded[task.originalRequest?.url?.absoluteString ?? ""] = 1
             client?.urlProtocolDidFinishLoading(self)
         }
     }
@@ -502,6 +508,8 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
         } else {
             client?.urlProtocol(self, wasRedirectedTo: mutableRedirect as URLRequest, redirectResponse: response)
         }
+
+        HTTPResponseModifierProtocol.urlsStatusLoaded[response.url?.absoluteString ?? ""] = 1
         
         // Return nil - let WKWebView handle the redirect navigation
         completionHandler(nil)

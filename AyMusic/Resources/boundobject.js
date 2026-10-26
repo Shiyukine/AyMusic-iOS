@@ -225,5 +225,15 @@ window.boundobject = {
     },
     searchUpdates: () => {
         console.error("searchUpdates is not implemented yet");
+    },
+    getIframeStatus: (url) => {
+        return new Promise((resolve) => {
+            let callId = window.boundobject.__manager.addCallback((data) => {
+                resolve(data);
+            });
+            window.boundobject.__manager.callNative('getIframeStatus', {
+                url: url
+            }, callId);
+        });
     }
 };

@@ -187,6 +187,9 @@ struct WebView: UIViewRepresentable {
         webView.scrollView.isScrollEnabled = false
         webView.scrollView.bounces = false
         
+        // add back gesture
+        webView.allowsBackForwardNavigationGestures = true
+        
         // Add cookie observer to watch for cookie changes
         // This is the NATIVE way to capture cookies from iframe redirects
         configuration.websiteDataStore.httpCookieStore.add(context.coordinator)
@@ -974,6 +977,12 @@ struct WebView: UIViewRepresentable {
                 
             case "restartApp":
                 webView?.reloadFromOrigin()
+
+            case "getIframeStatus":
+                let url = params["url"] as? String ?? ""
+                let urlStatus = HTTPResponseModifierProtocol.urlsStatusLoaded[url] ?? 0
+                let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)',\(urlStatus)); }"
+                executeJavaScript(script, in: iframeInfo, webView: webView)
 
             default:
                 print("Unknown method: \(method)")
