@@ -980,7 +980,7 @@ struct WebView: UIViewRepresentable {
 
             case "getIframeStatus":
                 let url = params["url"] as? String ?? ""
-                let urlStatus = HTTPResponseModifierProtocol.urlsStatusLoaded[url] ?? 0
+                let urlStatus = HTTPResponseModifierProtocol.status(for: url) ?? 0
                 let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)',\(urlStatus)); }"
                 executeJavaScript(script, in: iframeInfo, webView: webView)
 

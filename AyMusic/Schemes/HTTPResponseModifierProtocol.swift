@@ -26,7 +26,20 @@ class HTTPResponseModifierProtocol: URLProtocol {
     
     public static var blockedUrls: [[String:Any]] = []
 
-    public static var urlsStatusLoaded: [String: Int] = [:] //status: 0 - not loaded, 1 - loaded, 2 - failed
+    private static var _urlsStatusLoaded: [String: Int] = [:] //status: 0 - not loaded, 1 - loaded, 2 - failed
+    private static let statusQueue = DispatchQueue(label: "com.aymusic.urlsStatusLoadedQueue")
+
+    public static func setStatus(_ status: Int, for url: String) {
+        statusQueue.async {
+            _urlsStatusLoaded[url] = status
+        }
+    }
+
+    public static func status(for url: String) -> Int? {
+        statusQueue.sync {
+            _urlsStatusLoaded[url]
+        }
+    }
     
     // Client tokens storage
     private static var debounceSpotify = false
@@ -74,7 +87,7 @@ class HTTPResponseModifierProtocol: URLProtocol {
         }
 
         if let url = request.url {
-            HTTPResponseModifierProtocol.urlsStatusLoaded[url.absoluteString] = 0
+            HTTPResponseModifierProtocol.setStatus(0, for: url.absoluteString)
         }
         
         // Check if credentials are needed by looking at URL query parameter
@@ -391,7 +404,10 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
             print("   URL: \(task.originalRequest?.url?.absoluteString ?? "unknown")")
             print("   Error code: \((error as NSError).code)")
             print("   Error domain: \((error as NSError).domain)")
-            HTTPResponseModifierProtocol.urlsStatusLoaded[task.originalRequest?.url?.absoluteString ?? ""] = 2
+            if let req = task.originalRequest,
+               let url = req.url {
+                HTTPResponseModifierProtocol.setStatus(2, for: url.absoluteString)
+            }
             client?.urlProtocol(self, didFailWithError: error)
         } else {
             // Check for response overrides
@@ -446,7 +462,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
             
             if let req = task.originalRequest,
                let url = req.url {
-                HTTPResponseModifierProtocol.urlsStatusLoaded[url.absoluteString] = 1
+                HTTPResponseModifierProtocol.setStatus(1, for: url.absoluteString)
             }
             client?.urlProtocolDidFinishLoading(self)
         }
@@ -515,7 +531,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
         }
 
         if let url = response.url {
-            HTTPResponseModifierProtocol.urlsStatusLoaded[url.absoluteString] = 1
+            HTTPResponseModifierProtocol.setStatus(1, for: url.absoluteString)
         }
         
         // Return nil - let WKWebView handle the redirect navigation
