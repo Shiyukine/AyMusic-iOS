@@ -73,7 +73,9 @@ class HTTPResponseModifierProtocol: URLProtocol {
             }
         }
 
-        HTTPResponseModifierProtocol.urlsStatusLoaded[request.url?.absoluteString ?? ""] = 0
+        if let url = request.url {
+            HTTPResponseModifierProtocol.urlsStatusLoaded[url.absoluteString] = 0
+        }
         
         // Check if credentials are needed by looking at URL query parameter
         if let url = request.url, 
@@ -442,7 +444,10 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
                 client?.urlProtocol(self, didLoad: receivedData)
             }
             
-            HTTPResponseModifierProtocol.urlsStatusLoaded[task.originalRequest?.url?.absoluteString ?? ""] = 1
+            if let req = task.originalRequest,
+               let url = req.url {
+                HTTPResponseModifierProtocol.urlsStatusLoaded[url.absoluteString] = 1
+            }
             client?.urlProtocolDidFinishLoading(self)
         }
     }
@@ -509,7 +514,9 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
             client?.urlProtocol(self, wasRedirectedTo: mutableRedirect as URLRequest, redirectResponse: response)
         }
 
-        HTTPResponseModifierProtocol.urlsStatusLoaded[response.url?.absoluteString ?? ""] = 1
+        if let url = response.url {
+            HTTPResponseModifierProtocol.urlsStatusLoaded[url.absoluteString] = 1
+        }
         
         // Return nil - let WKWebView handle the redirect navigation
         completionHandler(nil)
