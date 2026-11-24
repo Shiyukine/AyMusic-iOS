@@ -20,7 +20,11 @@ struct WebView: UIViewRepresentable {
         self.fileName = fileName
     }
     
-    func makeUIView(context: Context) -> WKWebView {
+    func makeUIView(context: Context) -> WebViewHostView {
+        WebViewHostView(webView: makeWebView(context: context))
+    }
+    
+    private func makeWebView(context: Context) -> WKWebView {
         guard let resourcePath = Bundle.main.resourcePath else {
             return WKWebView()
         }
@@ -226,7 +230,12 @@ struct WebView: UIViewRepresentable {
         return webView
     }
     
-    func updateUIView(_ webView: WKWebView, context: Context) {
+    func updateUIView(_ host: WebViewHostView, context: Context) {
+        let webView = host.webView
+        // SwiftUI calls this on every parent update (e.g. each scenePhase change). Reloading here destroyed the page,
+        // the player iframe and the music whenever the app was opened. Load only once per file.
+        guard context.coordinator.loadedFileName != fileName else { return }
+        context.coordinator.loadedFileName = fileName
         let url = URL(string: "app://root/\(fileName)")!
         webView.load(URLRequest(url: url))
     }
@@ -403,6 +412,7 @@ struct WebView: UIViewRepresentable {
         var parent: WebView
         weak var webView: WKWebView?
         var filePickerCallbackId: String?
+        var loadedFileName: String?
         var filePickerFrameInfo: WKFrameInfo?
         
         init(_ parent: WebView) {
@@ -424,6 +434,11 @@ struct WebView: UIViewRepresentable {
                 // Also write to our own file right away, so the session survives a kill without a .background transition
                 CookieFileStore.saveDebounced(cookies)
             }
+        }
+        
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            // The web app is being (re)loaded: it will tell us again when it is ready
+            AudioManager.shared.pageDidReload()
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -802,6 +817,42 @@ struct WebView: UIViewRepresentable {
                     print("Failed to remove data: \(error.localizedDescription)")
                 }
 
+            case "setRestoreMute":
+                AudioManager.shared.setRestoreMute(params["mute"] as? Bool ?? false)
+            
+            case "mediaPlayAttempt":
+                if let frame = iframeInfo {
+                    AudioManager.shared.replayPlayAttempts(in: frame)
+                }
+            
+            case "setWebAudioPlaying":
+                AudioManager.shared.setWebAudioPlaying(params["playing"] as? Bool ?? false)
+            
+            case "registerFrame":
+                if let url = params["url"] as? String, let frame = iframeInfo {
+                    AudioManager.shared.registerFrame(url: url, frame: frame)
+                }
+            
+            case "appReady":
+                if iframeInfo?.isMainFrame ?? true {
+                    AudioManager.shared.pageDidBecomeReady()
+                }
+            
+            case "registerMediaFrame":
+                if let taskId = params["taskId"] as? String, let frame = iframeInfo {
+                    AudioManager.shared.registerMediaFrame(taskId: taskId, frame: frame)
+                }
+            
+            case "playMediaFrame":
+                // The calling frame is the main page; the callback goes back to it.
+                let taskId = params["taskId"] as? String ?? ""
+                let callerFrame = iframeInfo
+                AudioManager.shared.playMediaFrame(taskId: taskId) { [weak self] result in
+                    let literal = (try? JSONSerialization.data(withJSONObject: [result])).flatMap { String(data: $0, encoding: .utf8) } ?? "[\"error\"]"
+                    let script = "if(window.boundobject.__manager) { window.boundobject.__manager.callbackNative('\(callId)', \(literal)[0]); }"
+                    self?.executeJavaScript(script, in: callerFrame, webView: webView)
+                }
+            
             case "registerIframeUrl":
                 let url = params["url"] as? String ?? ""
                 let code = params["code"] as? String ?? ""

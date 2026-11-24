@@ -15,6 +15,8 @@ struct AyMusicApp: App {
     @State private var bgTask: UIBackgroundTaskIdentifier = .invalid
     
     init() {
+        // Must run at launch, not when a view appears: Control Center's play relaunches a closed app in background
+        AudioManager.shared.setupAtLaunch()
     }
     
     var body: some Scene {
