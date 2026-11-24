@@ -41,7 +41,7 @@ struct AyMusicApp: App {
             CookieFileStore.save(cookies)
 
             UIApplication.shared.endBackgroundTask(self.bgTask)
-            print("[Cookies] Saved \(cookies.filter { $0.isSessionOnly }.count) session-only cookies")
+            print("[Cookies] Saved \(cookies.count) cookies (\(cookies.filter { $0.isSessionOnly }.count) session-only)")
             self.bgTask = .invalid
         }
     }

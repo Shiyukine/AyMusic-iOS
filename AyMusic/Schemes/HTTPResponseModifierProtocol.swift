@@ -349,6 +349,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
                 // print("[Cookie Set] \(cookie.name) = \(cookie.value)")
                 
                 HTTPCookieStorage.shared.setCookie(cookie)
+                CookieFileStore.saveDebounced([])
                 
                 // CRITICAL: Also notify WKWebView to sync to its cookie store
                 // This makes cookies accessible to JavaScript (document.cookie)
@@ -475,6 +476,7 @@ extension HTTPResponseModifierProtocol: URLSessionDataDelegate, URLSessionTaskDe
             let cookies = HTTPCookie.cookies(withResponseHeaderFields: headers, for: url)
             for cookie in cookies {
                 HTTPCookieStorage.shared.setCookie(cookie)
+                CookieFileStore.saveDebounced([])
                 
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(
