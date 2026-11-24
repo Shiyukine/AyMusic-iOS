@@ -203,11 +203,18 @@ struct WebView: UIViewRepresentable {
             }
         }
         
-        // Restore session cookies from Keychain
+        // Restore cookies saved in CookieFileStore (this is what keeps session-only cookies across a restart,
+        // like Chrome / Electron / Android WebView do).
+        // They must go in BOTH stores: WKHTTPCookieStore for the web view, and HTTPCookieStorage.shared because
+        // the native request proxy (HTTPResponseModifierProtocol) builds its Cookie header from it, and iOS never
+        // persists session cookies there.
         let sessionCookies = CookieFileStore.load()
         for cookie in sessionCookies {
+            HTTPCookieStorage.shared.setCookie(cookie)
             configuration.websiteDataStore.httpCookieStore.setCookie(cookie)
         }
+        let sess = sessionCookies.filter { $0.name == "PHPSESSID" }
+        print("[Cookies] restored \(sessionCookies.count) from file; PHPSESSID: \(sess.map { "\($0.domain) session=\($0.isSessionOnly)" })")
         
         // Enable inspection (Safari Web Inspector)
         if #available(iOS 16.4, *) {
@@ -413,6 +420,9 @@ struct WebView: UIViewRepresentable {
                 for cookie in cookies {
                     HTTPCookieStorage.shared.setCookie(cookie)
                 }
+                
+                // Also write to our own file right away, so the session survives a kill without a .background transition
+                CookieFileStore.saveDebounced(cookies)
             }
         }
         
@@ -847,6 +857,7 @@ struct WebView: UIViewRepresentable {
 
                 let cookieStore = webView?.configuration.websiteDataStore.httpCookieStore
                 cookieStore?.getAllCookies { [weak self] cookies in
+                    print("[Cookies] haveCookie \(name) @ \(url): WK has \(cookies.filter { $0.name == name }.map { $0.domain })")
                     let exists = cookies.contains { $0.name == name && url.contains($0.domain) }
                     if exists {
                         let content = cookies.first { $0.name == name && url.contains($0.domain) }?.value

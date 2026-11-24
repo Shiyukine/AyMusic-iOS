@@ -16,6 +16,9 @@ struct PersistedCookie: Codable {
     let path: String
     let isSecure: Bool
     let sameSitePolicy: String?
+    // Optional so files written by older builds (session-only cookies) still decode
+    let expiresDate: Date?
+    let isHTTPOnly: Bool?
 
     init(from cookie: HTTPCookie) {
         name            = cookie.name
@@ -24,6 +27,8 @@ struct PersistedCookie: Codable {
         path            = cookie.path
         isSecure        = cookie.isSecure
         sameSitePolicy  = cookie.sameSitePolicy?.rawValue
+        expiresDate     = cookie.isSessionOnly ? nil : cookie.expiresDate
+        isHTTPOnly      = cookie.isHTTPOnly
     }
 
     func toHTTPCookie() -> HTTPCookie? {
@@ -31,9 +36,17 @@ struct PersistedCookie: Codable {
             .name:    name,
             .value:   value,
             .domain:  domain,
-            .path:    path,
-            .discard: "TRUE"  // restores it as a session cookie (no expiry)
+            .path:    path
         ]
+        if let expiresDate {
+            if expiresDate <= Date() { return nil }  // already expired
+            props[.expires] = expiresDate
+        } else {
+            props[.discard] = "TRUE"  // restores it as a session cookie (no expiry)
+        }
+        if isHTTPOnly == true {
+            props[HTTPCookiePropertyKey("HttpOnly")] = "TRUE"
+        }
         if isSecure {
             props[.secure] = "TRUE"
         }

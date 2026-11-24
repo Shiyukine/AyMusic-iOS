@@ -28,11 +28,20 @@ struct CookieFileStore {
 
     // MARK: - Save
 
+    /// `cookies` comes from WKHTTPCookieStore. It is merged with HTTPCookieStorage.shared, where the native request
+    /// proxy puts the cookies it receives (the login's session cookie lands there first, and only reaches the
+    /// WKHTTPCookieStore if a web view is around to receive the sync notification).
     static func save(_ cookies: [HTTPCookie]) {
-        let sessionCookies = cookies.filter { $0.isSessionOnly }
-        guard !sessionCookies.isEmpty else { return }
+        var merged: [String: HTTPCookie] = [:]
+        for cookie in cookies { merged["\(cookie.name)|\(cookie.domain)|\(cookie.path)"] = cookie }
+        for cookie in HTTPCookieStorage.shared.cookies ?? [] { merged["\(cookie.name)|\(cookie.domain)|\(cookie.path)"] = cookie }
+        let cookies = Array(merged.values)
 
-        guard let data = try? JSONEncoder().encode(sessionCookies.map { PersistedCookie(from: $0) }) else { return }
+        // Persist ALL cookies (not only session-only ones): WebKit / HTTPCookieStorage flush persistent
+        // cookies lazily, so a kill right after login (e.g. Xcode rebuild) could otherwise lose the session.
+        guard !cookies.isEmpty else { return }
+
+        guard let data = try? JSONEncoder().encode(cookies.map { PersistedCookie(from: $0) }) else { return }
 
         let url = fileURL
 
@@ -41,10 +50,10 @@ struct CookieFileStore {
                 to: url,
                 options: [
                     .atomic,
-                    // Encrypts file with device hardware key + user passcode.
-                    // File is inaccessible when device is locked.
-                    // Same underlying mechanism as the Keychain.
-                    .completeFileProtection
+                    // Encrypted at rest, but readable/writable once the device was unlocked after boot.
+                    // `.completeFileProtection` made the write fail when the app went to background because
+                    // the screen was locked, and made the read fail on a background launch while locked.
+                    .completeFileProtectionUntilFirstUserAuthentication
                 ]
             )
 
@@ -54,8 +63,25 @@ struct CookieFileStore {
             resourceValues.isExcludedFromBackup = true
             try resourceURL.setResourceValues(resourceValues)
 
+            print("[CookieFileStore] Saved \(cookies.count) cookie(s); PHPSESSID: \(cookies.filter { $0.name == "PHPSESSID" }.map { "\($0.domain) session=\($0.isSessionOnly)" })")
         } catch {
             print("[CookieFileStore] Save failed: \(error)")
+        }
+    }
+
+    // MARK: - Debounced save (called on every cookie change)
+
+    private static var pendingSave: DispatchWorkItem?
+    private static var lastWKCookies: [HTTPCookie] = []
+
+    /// Pass the WKHTTPCookieStore cookies when you have them, or [] to just re-save (HTTPCookieStorage.shared is always read).
+    static func saveDebounced(_ cookies: [HTTPCookie]) {
+        DispatchQueue.main.async {
+            if !cookies.isEmpty { lastWKCookies = cookies }
+            pendingSave?.cancel()
+            let item = DispatchWorkItem { save(lastWKCookies) }
+            pendingSave = item
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: item)
         }
     }
 
@@ -70,7 +96,9 @@ struct CookieFileStore {
         do {
             let data = try Data(contentsOf: fileURL)
             let records = try JSONDecoder().decode([PersistedCookie].self, from: data)
-            return records.compactMap { $0.toHTTPCookie() }
+            let cookies = records.compactMap { $0.toHTTPCookie() }
+            print("[CookieFileStore] Loaded \(cookies.count) cookie(s)")
+            return cookies
         } catch {
             print("[CookieFileStore] Load failed: \(error)")
             return []
